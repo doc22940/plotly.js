@@ -106,8 +106,14 @@ function drawOne(gd, index) {
 
         setClipPath(path, gd, options);
 
-        if(gd._context.edits.shapePosition) setupDragElement(gd, path, options, index, shapeLayer);
+        if(shouldModifyPosition(gd)) {
+            setupDragElement(gd, path, options, index, shapeLayer);
+        }
     }
+}
+
+function shouldModifyPosition(gd) {
+    return !!(gd._context.edits.shapePosition);
 }
 
 function setClipPath(shapePath, gd, shapeOptions) {
