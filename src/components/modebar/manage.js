@@ -167,6 +167,9 @@ function getButtonGroups(gd) {
     if(isSelectable(fullData)) {
         dragModeGroup.push('select2d', 'lasso2d');
     }
+    if(isDrawable(fullLayout)) {
+        dragModeGroup.push('rect2d', 'free2d');
+    }
 
     addGroup(dragModeGroup);
     addGroup(zoomGroup.concat(resetGroup));
@@ -217,6 +220,13 @@ function isSelectable(fullData) {
     }
 
     return selectable;
+}
+
+function isDrawable(fullLayout) {
+    // look for Cartesian traces for now
+    var drawable = fullLayout._has('cartesian');
+
+    return drawable;
 }
 
 // check whether all trace are 'noHover'

@@ -134,6 +134,24 @@ modeBarButtons.lasso2d = {
     click: handleCartesian
 };
 
+modeBarButtons.free2d = {
+    name: 'free2d',
+    title: function(gd) { return _(gd, 'Draw Freeform'); },
+    attr: 'dragmode',
+    val: 'draw-freeform',
+    icon: Icons.draw_freeform,
+    click: handleCartesian
+};
+
+modeBarButtons.rect2d = {
+    name: 'rect2d',
+    title: function(gd) { return _(gd, 'Draw Rectangle'); },
+    attr: 'dragmode',
+    val: 'draw-rectangle',
+    icon: Icons.draw_rectangle,
+    click: handleCartesian
+};
+
 modeBarButtons.zoomIn2d = {
     name: 'zoomIn2d',
     title: function(gd) { return _(gd, 'Zoom in'); },

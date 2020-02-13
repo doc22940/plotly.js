@@ -14,11 +14,15 @@ var polybool = require('polybooljs');
 var Registry = require('../../registry');
 var Color = require('../../components/color');
 var Fx = require('../../components/fx');
+var fxHelpers = require('../../components/fx/helpers');
+var makeEventData = fxHelpers.makeEventData;
+var freeMode = fxHelpers.freeMode;
+var rectMode = fxHelpers.rectMode;
+var drawMode = fxHelpers.drawMode;
 
 var Lib = require('../../lib');
 var polygon = require('../../lib/polygon');
 var throttle = require('../../lib/throttle');
-var makeEventData = require('../../components/fx/helpers').makeEventData;
 var getFromId = require('./axis_ids').getFromId;
 var clearGlCanvases = require('../../lib/clear_gl_canvases');
 
@@ -33,6 +37,10 @@ var polygonTester = polygon.tester;
 function getAxId(ax) { return ax._id; }
 
 function prepSelect(e, startX, startY, dragOptions, mode) {
+    var isFreeMode = freeMode(mode);
+    var isRectMode = rectMode(mode);
+    var isDrawMode = drawMode(mode);
+
     var gd = dragOptions.gd;
     var fullLayout = gd._fullLayout;
     var zoomLayer = fullLayout._zoomlayer;
@@ -55,7 +63,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
 
     coerceSelectionsCache(e, gd, dragOptions);
 
-    if(mode === 'lasso') {
+    if(isFreeMode) {
         filterPoly = filteredPolygon([[x0, y0]], constants.BENDPX);
     }
 
@@ -64,6 +72,12 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
     outlines.enter()
         .append('path')
         .attr('class', function(d) { return 'select-outline select-outline-' + d + ' select-outline-' + plotinfo.id; })
+        .style(isDrawMode ? {
+            opacity: 0.25,
+            fill: 'yellow',
+            stroke: 'black',
+            'stroke-width': 4
+        } : {})
         .attr('transform', 'translate(' + xs + ', ' + ys + ')')
         .attr('d', path0 + 'Z');
 
@@ -104,7 +118,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
     if(plotinfo.fillRangeItems) {
         fillRangeItems = plotinfo.fillRangeItems;
     } else {
-        if(mode === 'select') {
+        if(isRectMode) {
             fillRangeItems = function(eventData, poly) {
                 var ranges = eventData.range = {};
 
@@ -118,7 +132,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
                     ].sort(ascending);
                 }
             };
-        } else {
+        } else { // case of isFreeMode
             fillRangeItems = function(eventData, poly, filterPoly) {
                 var dataPts = eventData.lassoPoints = {};
 
@@ -137,7 +151,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
         var dx = Math.abs(x1 - x0);
         var dy = Math.abs(y1 - y0);
 
-        if(mode === 'select') {
+        if(isRectMode) {
             var direction = fullLayout.selectdirection;
 
             if(fullLayout.selectdirection === 'any') {
@@ -180,7 +194,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
                 currentPolygon.ymax = Math.max(y0, y1);
                 corners.attr('d', 'M0,0Z');
             }
-        } else if(mode === 'lasso') {
+        } else if(isFreeMode) {
             filterPoly.addPt([x1, y1]);
             currentPolygon = filterPoly.filtered;
         }
