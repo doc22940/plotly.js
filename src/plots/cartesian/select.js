@@ -218,8 +218,8 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
             selectionTester = polygonTester(currentPolygon);
         }
 
-        // draw selection
-        drawSelection(mergedPolygons, outlines);
+        // display polygons on the screen
+        displayOutlines(mergedPolygons, outlines);
 
         if(isSelectMode) {
             throttle.throttle(
@@ -320,7 +320,8 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
 
 function selectOnClick(evt, gd, xAxes, yAxes, subplot, dragOptions, polygonOutlines) {
     var hoverData = gd._hoverdata;
-    var clickmode = gd._fullLayout.clickmode;
+    var fullLayout = gd._fullLayout;
+    var clickmode = fullLayout.clickmode;
     var sendEvents = clickmode.indexOf('event') > -1;
     var selection = [];
     var searchTraces, searchInfo, currentSelectionDef, selectionTester, traceSelection;
@@ -381,7 +382,12 @@ function selectOnClick(evt, gd, xAxes, yAxes, subplot, dragOptions, polygonOutli
                 dragOptions.selectionDefs.push(currentSelectionDef);
             }
 
-            if(polygonOutlines) drawSelection(dragOptions.mergedPolygons, polygonOutlines);
+            if(polygonOutlines) {
+                var polygons = dragOptions.mergedPolygons;
+
+                // display polygons on the screen
+                displayOutlines(polygons, polygonOutlines);
+            }
 
             if(sendEvents) {
                 gd.emit('plotly_selected', eventData);
@@ -518,7 +524,23 @@ function coerceSelectionsCache(evt, gd, dragOptions) {
 }
 
 function clearSelectionsCache(dragOptions) {
+    var dragmode = dragOptions.dragmode;
     var plotinfo = dragOptions.plotinfo;
+
+    if(drawMode(dragmode)) {
+        var gd = dragOptions.gd;
+
+        var outlines = gd._fullLayout._zoomlayer.selectAll('.select-outline-' + plotinfo.id);
+        if(outlines) {
+            // add shape
+            addShape(outlines, dragOptions, {
+                onPaper: false // TODO: we could enable this to draw on paper coordinates
+            });
+
+            // remove outlines
+            outlines.remove();
+        }
+    }
 
     plotinfo.selection = {};
     plotinfo.selection.selectionDefs = dragOptions.selectionDefs = [];
@@ -573,19 +595,132 @@ function determineSearchTraces(gd, xAxes, yAxes, subplot) {
     }
 }
 
-function drawSelection(polygons, outlines) {
+function displayOutlines(
+    polygons, // in
+    outlines  // inout
+) {
     var paths = [];
-    var i, d;
-
-    for(i = 0; i < polygons.length; i++) {
-        var ppts = polygons[i];
-        paths.push(ppts.join('L') + 'L' + ppts[0]);
+    for(var i = 0; i < polygons.length; i++) {
+        paths.push(
+            providePath(polygons[i])
+        );
     }
 
-    d = polygons.length > 0 ?
-      'M' + paths.join('M') + 'Z' :
-      'M0,0Z';
-    outlines.attr('d', d);
+    outlines.attr('d', writePaths(paths));
+}
+
+function providePath(polygon) {
+    return polygon.join('L') + 'L' + polygon[0];
+}
+
+function writePaths(paths) {
+    return paths.length > 0 ? 'M' + paths.join('M') + 'Z' : 'M0,0Z';
+}
+
+function readPaths(str, size, plotinfo) {
+    var allParts = str
+        .substring(1, str.length - 1) // remove M from start and Z from end
+        .split('M');
+
+    var allPaths = [];
+    for(var i = 0; i < allParts.length; i++) {
+        var part = allParts[i].split('L');
+
+        var path = [];
+        for(var j = 0; j < part.length - 1; j++) { // skip last closing point
+            var pos = part[j].split(',');
+            var x = pos[0];
+            var y = pos[1];
+
+            if(plotinfo) {
+                path.push([
+                    p2r(plotinfo.xaxis, x),
+                    p2r(plotinfo.yaxis, y)
+                ]);
+            } else {
+                path.push([
+                    x / size.w,
+                    1 - y / size.h
+                ]);
+            }
+        }
+
+        allPaths.push(path);
+    }
+
+    return allPaths;
+}
+
+function fixDatesOnPaths(allPaths, xaxis, yaxis) {
+    var xIsDate = xaxis.type === 'date';
+    var yIsDate = yaxis.type === 'date';
+    if(!xIsDate && !yIsDate) return allPaths;
+
+    for(var i = 0; i < allPaths.length; i++) {
+        for(var j = 0; j < allPaths[i].length; j++) {
+            if(xIsDate) allPaths[i][j][0] = allPaths[i][j][0].replace(' ', '_');
+            if(yIsDate) allPaths[i][j][1] = allPaths[i][j][1].replace(' ', '_');
+        }
+    }
+
+    return allPaths;
+}
+
+function addShape(outlines, dragOptions, opts) {
+    if(!outlines.length) return;
+    var gd = dragOptions.gd;
+    var onPaper = opts.onPaper;
+    var plotinfo = dragOptions.plotinfo;
+    var xaxis = plotinfo.xaxis;
+    var yaxis = plotinfo.yaxis;
+
+    var e = outlines[0][0]; // pick first one | TODO: why we get two identical elements?
+    if(!e) return;
+    var d = e.getAttribute('d');
+
+    var newShapes = [];
+    var fullLayout = gd._fullLayout;
+    var polygons = readPaths(d, fullLayout._size, onPaper ? undefined : plotinfo);
+
+    for(var i = 0; i < polygons.length; i++) {
+        if(polygons[i].length < 2) continue;
+
+        var shape = {
+            xref: onPaper ? 'paper' : xaxis._id,
+            yref: onPaper ? 'paper' : yaxis._id,
+            opacity: 0.5,
+            fillcolor: 'yellow',
+            line: {
+                color: 'black',
+                width: 2,
+                dash: 'dash'
+            }
+        };
+
+        if(
+            polygons[i].length === 4 &&
+            rectMode(dragOptions.dragmode)
+        ) {
+            shape.x0 = polygons[i][0][0];
+            shape.x1 = polygons[i][2][0];
+            shape.y0 = polygons[i][0][1];
+            shape.y1 = polygons[i][2][1];
+        } else {
+            fixDatesOnPaths(polygons, xaxis, yaxis);
+
+            shape.path = writePaths([
+                providePath(polygons[i])
+            ]);
+        }
+
+        newShapes.push(shape);
+    }
+
+    if(newShapes.length) {
+        Registry.call('relayout', gd, {
+            shapes: (fullLayout.shapes || []).concat(newShapes)
+        });
+    }
 }
 
 function isHoverDataSet(hoverData) {
