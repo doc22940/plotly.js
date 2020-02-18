@@ -40,7 +40,14 @@ function getAxId(ax) { return ax._id; }
 // in v2 (once log ranges are fixed),
 // we'll be able to p2r here for all axis types
 function p2r(ax, v) {
-    return ax.type === 'log' ? ax.p2d(v) : ax.p2r(v);
+    switch(ax.type) {
+        case 'log':
+            return ax.p2d(v);
+        case 'date':
+            return ax.p2r(v, 0, ax.calendar);
+        default:
+            return ax.p2r(v);
+    }
 }
 
 function axValue(ax) {
