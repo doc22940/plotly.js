@@ -19,6 +19,7 @@ var makeEventData = fxHelpers.makeEventData;
 var freeMode = fxHelpers.freeMode;
 var rectMode = fxHelpers.rectMode;
 var drawMode = fxHelpers.drawMode;
+var selectMode = fxHelpers.selectMode;
 
 var Lib = require('../../lib');
 var polygon = require('../../lib/polygon');
@@ -40,6 +41,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
     var isFreeMode = freeMode(mode);
     var isRectMode = rectMode(mode);
     var isDrawMode = drawMode(mode);
+    var isSelectMode = selectMode(mode);
 
     var gd = dragOptions.gd;
     var fullLayout = gd._fullLayout;
@@ -212,37 +214,38 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
         // draw selection
         drawSelection(mergedPolygons, outlines);
 
+        if(isSelectMode) {
+            throttle.throttle(
+                throttleID,
+                constants.SELECTDELAY,
+                function() {
+                    selection = [];
 
-        throttle.throttle(
-            throttleID,
-            constants.SELECTDELAY,
-            function() {
-                selection = [];
+                    var thisSelection;
+                    var traceSelections = [];
+                    var traceSelection;
+                    for(i = 0; i < searchTraces.length; i++) {
+                        searchInfo = searchTraces[i];
 
-                var thisSelection;
-                var traceSelections = [];
-                var traceSelection;
-                for(i = 0; i < searchTraces.length; i++) {
-                    searchInfo = searchTraces[i];
+                        traceSelection = searchInfo._module.selectPoints(searchInfo, selectionTester);
+                        traceSelections.push(traceSelection);
 
-                    traceSelection = searchInfo._module.selectPoints(searchInfo, selectionTester);
-                    traceSelections.push(traceSelection);
+                        thisSelection = fillSelectionItem(traceSelection, searchInfo);
 
-                    thisSelection = fillSelectionItem(traceSelection, searchInfo);
+                        if(selection.length) {
+                            for(var j = 0; j < thisSelection.length; j++) {
+                                selection.push(thisSelection[j]);
+                            }
+                        } else selection = thisSelection;
+                    }
 
-                    if(selection.length) {
-                        for(var j = 0; j < thisSelection.length; j++) {
-                            selection.push(thisSelection[j]);
-                        }
-                    } else selection = thisSelection;
+                    eventData = {points: selection};
+                    updateSelectedState(gd, searchTraces, eventData);
+                    fillRangeItems(eventData, currentPolygon, filterPoly);
+                    dragOptions.gd.emit('plotly_selecting', eventData);
                 }
-
-                eventData = {points: selection};
-                updateSelectedState(gd, searchTraces, eventData);
-                fillRangeItems(eventData, currentPolygon, filterPoly);
-                dragOptions.gd.emit('plotly_selecting', eventData);
-            }
-        );
+            );
+        }
     };
 
     dragOptions.clickFn = function(numClicks, evt) {
