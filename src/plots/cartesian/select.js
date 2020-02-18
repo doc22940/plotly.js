@@ -37,6 +37,17 @@ var polygonTester = polygon.tester;
 
 function getAxId(ax) { return ax._id; }
 
+// in v2 (once log ranges are fixed),
+// we'll be able to p2r here for all axis types
+function p2r(ax, v) {
+    return ax.type === 'log' ? ax.p2d(v) : ax.p2r(v);
+}
+
+function axValue(ax) {
+    var index = (ax._id.charAt(0) === 'y') ? 1 : 0;
+    return function(v) { return p2r(ax, v[index]); };
+}
+
 function prepSelect(e, startX, startY, dragOptions, mode) {
     var isFreeMode = freeMode(mode);
     var isRectMode = rectMode(mode);
@@ -100,17 +111,6 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
     // find the traces to search for selection points
     var searchTraces = determineSearchTraces(gd, dragOptions.xaxes,
       dragOptions.yaxes, dragOptions.subplot);
-
-    // in v2 (once log ranges are fixed),
-    // we'll be able to p2r here for all axis types
-    function p2r(ax, v) {
-        return ax.type === 'log' ? ax.p2d(v) : ax.p2r(v);
-    }
-
-    function axValue(ax) {
-        var index = (ax._id.charAt(0) === 'y') ? 1 : 0;
-        return function(v) { return p2r(ax, v[index]); };
-    }
 
     function ascending(a, b) { return a - b; }
 
