@@ -50,6 +50,16 @@ function p2r(ax, v) {
     }
 }
 
+/*
+function map2r(axes, vals) {
+    var v = [+vals[0], +vals[1]];
+    return [
+        axes[0].p2r(v),
+        axes[1].p2r(v)
+    ];
+}
+*/
+
 function axValue(ax) {
     var index = (ax._id.charAt(0) === 'y') ? 1 : 0;
     return function(v) { return p2r(ax, v[index]); };
@@ -617,10 +627,20 @@ function writePaths(paths) {
     return paths.length > 0 ? 'M' + paths.join('M') + 'Z' : 'M0,0Z';
 }
 
+function isMap(plotinfo) {
+    return !!(
+        plotinfo &&
+        plotinfo.id &&
+        plotinfo.id.indexOf('mapbox') === 0
+    );
+}
+
 function readPaths(str, size, plotinfo) {
     var allParts = str
         .substring(1, str.length - 1) // remove M from start and Z from end
         .split('M');
+
+    var map = isMap(plotinfo);
 
     var allPaths = [];
     for(var i = 0; i < allParts.length; i++) {
@@ -632,7 +652,12 @@ function readPaths(str, size, plotinfo) {
             var x = pos[0];
             var y = pos[1];
 
-            if(plotinfo) {
+            /* if(map) {
+                path.push(map2r(
+                    [plotinfo.xaxis, plotinfo.yaxis],
+                    [x, y]
+                ));
+            } else */ if(plotinfo && !map) {
                 path.push([
                     p2r(plotinfo.xaxis, x),
                     p2r(plotinfo.yaxis, y)
@@ -680,14 +705,17 @@ function addShape(outlines, dragOptions, opts) {
 
     var newShapes = [];
     var fullLayout = gd._fullLayout;
-    var polygons = readPaths(d, fullLayout._size, onPaper ? undefined : plotinfo);
+
+    var map = isMap(plotinfo);
+
+    var polygons = readPaths(d, fullLayout._size, (map || onPaper) ? undefined : plotinfo);
 
     for(var i = 0; i < polygons.length; i++) {
         if(polygons[i].length < 2) continue;
 
         var shape = {
-            xref: onPaper ? 'paper' : xaxis._id,
-            yref: onPaper ? 'paper' : yaxis._id,
+            xref: (map || onPaper) ? 'paper' : xaxis._id,
+            yref: (map || onPaper) ? 'paper' : yaxis._id,
             opacity: 0.5,
             fillcolor: 'yellow',
             line: {
@@ -958,5 +986,6 @@ function clearSelect(gd) {
 module.exports = {
     prepSelect: prepSelect,
     clearSelect: clearSelect,
+    clearSelectionsCache: clearSelectionsCache,
     selectOnClick: selectOnClick
 };

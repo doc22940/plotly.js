@@ -223,8 +223,10 @@ function isSelectable(fullData) {
 }
 
 function isDrawable(fullLayout) {
-    // look for Cartesian traces for now
-    var drawable = fullLayout._has('cartesian');
+    var drawable = (
+        fullLayout._has('mapbox') ||
+        fullLayout._has('cartesian')
+    );
 
     return drawable;
 }
