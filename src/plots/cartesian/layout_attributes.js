@@ -259,8 +259,7 @@ module.exports = {
             ].join(' ')
         },
 
-        // TODO maybe values with a free length?
-
+        // OR 'range' OR 'values'
         bounds: {
             valType: 'info_array',
             role: 'info',
@@ -276,10 +275,36 @@ module.exports = {
 
         directive: {
             valType: 'enumerated',
+            // Same d3-format symbols as used in tickformat
+            //
+            // example:
+            // - { directive: '%w', bounds: [6, 1] }
+            //   breaks form Saturday to Monday (i.e. skips the weekends)
+            // - { directive: '%H, bounds: [17, 8] }
+            //   breaks from 5pm to 8am (i.e. skips non-work hours)
+            //
+            // Problem: how to allow users to set minutes, seconds, etc in their
+            // break bounds?
+            //
+            // Idea: add a few "combo" values for `directive` e.g.
+            //   { directive: '%H:%M:%S', bounds: ['17:30:05', '8:08:01'] }
+            //
+            // Alternative: Highcharts uses settings `from`, `to` together
+            // with a `repeat` e.g.
+            //   { from: Date.UTC(2020, 2, 22), to: Date.UTC(2020, 2, 23), repeat: 7*24*60*60*1000 }
+            //   would skips all Saturdays and Sundays
+            //
+            // But, I'm not a fan of the Highcharts API, since it relies on
+            // setting arbitrary dates (converted to UTC and then in ms - ooof).
+            // This API works fine in and out of Daylight Saving Time changes
+            // but only since it uses UTC time. A fix `repeat` settings is a
+            // little misleading in my opinion.
+            //
             values: ['%w', '%H'],
             role: 'info',
             editType: 'calc',
             description: [
+                'Only coerce on *date* axes.',
                 '...',
                 'https://github.com/d3/d3-time-format#locale_format',
                 '',
@@ -290,36 +315,55 @@ module.exports = {
 
         operation: {
             valType: 'enumerated',
-            // values: INTERVAL_OPS,
-            values: ['[]', '()'],
-            dflt: '()',  // TODO or '[]' ??
+            values: ['[]', '()', '[)', '(]'],
+            dflt: '()',
             role: 'info',
             editType: 'calc',
+            description: [
+                'Determines if we include or not the bound values within the break.'
+            ].join(' ')
+        },
+
+        // Highcharts calls this `breakSize`:
+        // "A number indicating how much space should be left between the start
+        // and the end of the break. The break size is given in axis units, so
+        // for instance on a datetime axis, a break size of 3600000 would
+        // indicate the equivalent of an hour.
+        gap: {
+            valType: 'number',
+            min: 0,
+            dflt: 0, // for *date* axes, maybe something else for *linear*
+            editType: 'calc',
+            role: 'info',
             description: [
                 '...'
             ].join(' ')
         },
+        gapmode: {
+            valType: 'enumerated',
+            values: ['pixels', 'fraction'],
+            dflt: 'pixels',
+            role: 'info',
+            description: [
+                'Determines if the `gap` value corresponds to a pixel length',
+                'or a fraction of the plot area.'
+            ].join(' ')
+        },
 
-        // operation: [] || {}
-        // value(s): [start, end], [rule]
+        // To complete https://github.com/plotly/plotly.js/issues/1382
+        // we need `enabled`, `directive`, `bounds` to work on *date* axes
         //
-        // OR
-        // bounds: []
-        // dtickrange: []
+        // To complete https://github.com/plotly/plotly.js/issues/4210
+        // we additionally need `gap` and make this work on *linear*, and
+        // possibly all other cartesian axis types. We possibly would also need
+        // some style attributes controlling the zig-zag on the corresponding
+        // axis.
 
-        // something like breakSize
-        // A number indicating how much space should be
-        // left between the start and the end of the break. The break size is
-        // given in axis units, so for instance on a datetime axis, a break size
-        // of 3600000 would indicate the equivalent of an hour.
-
+        // More links
         // https://github.com/d3fc/d3fc/tree/master/packages/d3fc-discontinuous-scale
         // https://github.com/d3fc/d3fc/tree/master/packages/d3fc-webgl/src
         // https://github.com/d3/d3-time-format#locale_format
         // https://github.com/d3/d3-time
-        //
-        // https://github.com/plotly/plotly.js/issues/1382
-        // https://github.com/plotly/plotly.js/issues/4210
 
         editType: 'calc'
     }),
