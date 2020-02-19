@@ -224,7 +224,7 @@ function isSelectable(fullData) {
 
 function isDrawable(fullLayout) {
     var drawable = (
-        fullLayout._has('mapbox') ||
+        // fullLayout._has('mapbox') ||
         fullLayout._has('cartesian')
     );
 
