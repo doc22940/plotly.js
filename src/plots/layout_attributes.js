@@ -11,6 +11,7 @@
 var fontAttrs = require('./font_attributes');
 var animationAttrs = require('./animation_attributes');
 var colorAttrs = require('../components/color/attributes');
+var dash = require('../components/drawing/attributes').dash;
 var padAttrs = require('./pad_attributes');
 var extendFlat = require('../lib/extend').extendFlat;
 
@@ -442,6 +443,57 @@ module.exports = {
             ].join(' ')
         },
         editType: 'modebar'
+    },
+
+    newshape: {
+        line: {
+            color: {
+                valType: 'color',
+                dflt: 'black',
+                editType: 'none',
+                role: 'info',
+                description: 'Sets the line color.'
+            },
+            width: {
+                valType: 'number',
+                min: 0,
+                dflt: 2,
+                role: 'info',
+                editType: 'none',
+                description: 'Sets the line width (in px).'
+            },
+            dash: extendFlat({}, dash, {
+                dflt: 'dash',
+                editType: 'none'
+            }),
+            role: 'info',
+            editType: 'none'
+        },
+        fillcolor: {
+            valType: 'color',
+            dflt: 'rgb(191,191,191)',
+            role: 'info',
+            editType: 'none',
+            description: 'Sets the color filling new shapes\' interior.'
+        },
+        opacity: {
+            valType: 'number',
+            min: 0,
+            max: 1,
+            dflt: 0.5,
+            role: 'info',
+            editType: 'none',
+            description: 'Sets the opacity of new shapes.'
+        },
+        layer: {
+            valType: 'enumerated',
+            values: ['below', 'above'],
+            dflt: 'above',
+            role: 'info',
+            editType: 'none',
+            description: 'Specifies whether new shapes are drawn below or above traces.'
+        },
+        editType: 'none'
     },
 
     meta: {

@@ -1523,6 +1523,15 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
     coerce('modebar.activecolor', Color.addOpacity(modebarDefaultColor, 0.7));
     coerce('modebar.uirevision', uirevision);
 
+    coerce('newshape.layer');
+    coerce('newshape.fillcolor');
+    coerce('newshape.opacity');
+    var newshapeLineWidth = coerce('newshape.line.width');
+    if(newshapeLineWidth) {
+        coerce('newshape.line.color');
+        coerce('newshape.line.dash');
+    }
+
     coerce('meta');
 
     // do not include defaults in fullLayout when users do not set transition

@@ -12,6 +12,7 @@
 var polybool = require('polybooljs');
 
 var Registry = require('../../registry');
+var dashStyle = require('../../components/drawing').dashStyle;
 var Color = require('../../components/color');
 var Fx = require('../../components/fx');
 var fxHelpers = require('../../components/fx/helpers');
@@ -97,17 +98,20 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
         filterPoly = filteredPolygon([[x0, y0]], constants.BENDPX);
     }
 
-    var outlines = zoomLayer.selectAll('path.select-outline-' + plotinfo.id).data([1, 2]);
+    var outlines = zoomLayer.selectAll('path.select-outline-' + plotinfo.id).data(isDrawMode ? [0] : [1, 2]);
+    var style = fullLayout.newshape;
 
     outlines.enter()
         .append('path')
         .attr('class', function(d) { return 'select-outline select-outline-' + d + ' select-outline-' + plotinfo.id; })
         .style(isDrawMode ? {
-            opacity: 0.25,
-            fill: 'yellow',
-            stroke: 'black',
-            'stroke-width': 4
+            opacity: style.opacity / 2,
+            fill: style.fillcolor,
+            stroke: style.line.color,
+            'stroke-dasharray': dashStyle(style.line.dash, style.line.width),
+            'stroke-width': style.line.width + 'px'
         } : {})
+        .attr('fill-rule', 'evenodd')
         .attr('transform', 'translate(' + xs + ', ' + ys + ')')
         .attr('d', path0 + 'Z');
 
@@ -694,12 +698,13 @@ function fixDatesOnPaths(allPaths, xaxis, yaxis) {
 function addShape(outlines, dragOptions, opts) {
     if(!outlines.length) return;
     var gd = dragOptions.gd;
+    var style = gd._fullLayout.newshape;
     var onPaper = opts.onPaper;
     var plotinfo = dragOptions.plotinfo;
     var xaxis = plotinfo.xaxis;
     var yaxis = plotinfo.yaxis;
 
-    var e = outlines[0][0]; // pick first one | TODO: why we get two identical elements?
+    var e = outlines[0][0]; // pick first
     if(!e) return;
     var d = e.getAttribute('d');
 
@@ -716,12 +721,14 @@ function addShape(outlines, dragOptions, opts) {
         var shape = {
             xref: (map || onPaper) ? 'paper' : xaxis._id,
             yref: (map || onPaper) ? 'paper' : yaxis._id,
-            opacity: 0.5,
-            fillcolor: 'yellow',
+
+            layer: style.layer,
+            opacity: style.opacity,
+            fillcolor: style.fillcolor,
             line: {
-                color: 'black',
-                width: 2,
-                dash: 'dash'
+                color: style.line.color,
+                width: style.line.width,
+                dash: style.line.dash
             }
         };
 
@@ -745,8 +752,12 @@ function addShape(outlines, dragOptions, opts) {
     }
 
     if(newShapes.length) {
+        var oldShapes = fullLayout.shapes;
+
         Registry.call('relayout', gd, {
-            shapes: (fullLayout.shapes || []).concat(newShapes)
+            shapes: style.layer === 'below' ?
+                (newShapes).concat(oldShapes) : // add newShapes to the start
+                (oldShapes).concat(newShapes)   // add newShapes to the end
         });
     }
 }
