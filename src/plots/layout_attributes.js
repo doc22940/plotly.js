@@ -496,6 +496,14 @@ module.exports = {
             editType: 'none',
             description: 'Specifies whether new shapes are drawn below or above traces.'
         },
+        order: {
+            valType: 'enumerated',
+            values: ['front', 'back'],
+            dflt: 'front',
+            role: 'info',
+            editType: 'none',
+            description: 'Specifies whether new shapes are drawn below or above previous shapes in the `layer`.'
+        },
         editType: 'none'
     },
 

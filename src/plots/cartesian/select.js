@@ -755,7 +755,7 @@ function addShape(outlines, dragOptions, opts) {
         var oldShapes = fullLayout.shapes;
 
         Registry.call('relayout', gd, {
-            shapes: style.layer === 'below' ?
+            shapes: style.order === 'back' ?
                 (newShapes).concat(oldShapes) : // add newShapes to the start
                 (oldShapes).concat(newShapes)   // add newShapes to the end
         });
