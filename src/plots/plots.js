@@ -1528,7 +1528,8 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
     coerce('newshape.opacity');
     var newshapeLineWidth = coerce('newshape.line.width');
     if(newshapeLineWidth) {
-        coerce('newshape.line.color');
+        var bgcolor = (layoutIn || {}).plot_bgcolor || '#FFF';
+        coerce('newshape.line.color', Color.contrast(bgcolor));
         coerce('newshape.line.dash');
     }
 

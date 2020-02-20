@@ -449,10 +449,13 @@ module.exports = {
         line: {
             color: {
                 valType: 'color',
-                dflt: 'black',
-                editType: 'none',
+                editType: 'plot',
                 role: 'info',
-                description: 'Sets the line color.'
+                description: [
+                    'Sets the line color.',
+                    'By default uses either dark grey or white',
+                    'to increase contrast with background color.'
+                ].join(' ')
             },
             width: {
                 valType: 'number',
