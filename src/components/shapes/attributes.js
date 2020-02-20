@@ -238,5 +238,16 @@ module.exports = templatedArray('shape', {
             'Sets the color filling the closed shape\'s interior.'
         ].join(' ')
     },
+    fillrule: {
+        valType: 'enumerated',
+        values: ['evenodd', 'nonzero'],
+        dflt: 'evenodd',
+        role: 'info',
+        editType: 'arraydraw',
+        description: [
+            'Determines the shape\'s interior.',
+            'For more info please visit https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/fill-rule'
+        ].join(' ')
+    },
     editType: 'arraydraw'
 });

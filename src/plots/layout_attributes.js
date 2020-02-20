@@ -479,6 +479,17 @@ module.exports = {
             editType: 'none',
             description: 'Sets the color filling new shapes\' interior.'
         },
+        fillrule: {
+            valType: 'enumerated',
+            values: ['evenodd', 'nonzero'],
+            dflt: 'evenodd',
+            role: 'info',
+            editType: 'none',
+            description: [
+                'Determines the shape\'s interior.',
+                'For more info please visit https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/fill-rule'
+            ].join(' ')
+        },
         opacity: {
             valType: 'number',
             min: 0,

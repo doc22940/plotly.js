@@ -111,7 +111,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
             'stroke-dasharray': dashStyle(style.line.dash, style.line.width),
             'stroke-width': style.line.width + 'px'
         } : {})
-        .attr('fill-rule', 'evenodd')
+        .attr('fill-rule', style.fillrule)
         .attr('transform', 'translate(' + xs + ', ' + ys + ')')
         .attr('d', path0 + 'Z');
 
@@ -746,13 +746,17 @@ function addShape(outlines, dragOptions, opts) {
 
             layer: style.layer,
             opacity: style.opacity,
-            fillcolor: isOpen ? undefined : style.fillcolor,
             line: {
                 color: style.line.color,
                 width: style.line.width,
                 dash: style.line.dash
             }
         };
+
+        if(!isOpen) {
+            shape.fillcolor = style.fillcolor;
+            shape.fillrule = style.fillrule;
+        }
 
         if(len === 4 && isRectMode) {
             // pick start and end points from diagonal

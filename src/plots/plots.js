@@ -1527,6 +1527,7 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
     coerce('newshape.order');
     coerce('newshape.layer');
     coerce('newshape.fillcolor');
+    coerce('newshape.fillrule');
     coerce('newshape.opacity');
     var newshapeLineWidth = coerce('newshape.line.width');
     if(newshapeLineWidth) {

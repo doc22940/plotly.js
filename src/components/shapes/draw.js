@@ -92,7 +92,7 @@ function drawOne(gd, index) {
     function drawShape(shapeLayer) {
         var attrs = {
             'data-index': index,
-            'fill-rule': 'evenodd',
+            'fill-rule': options.fillrule,
             d: getPathString(gd, options)
         };
         var lineColor = options.line.width ? options.line.color : 'rgba(0,0,0,0)';
