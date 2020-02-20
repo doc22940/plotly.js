@@ -87,7 +87,8 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
     var pw = dragOptions.xaxes[0]._length;
     var ph = dragOptions.yaxes[0]._length;
     var allAxes = dragOptions.xaxes.concat(dragOptions.yaxes);
-    var subtract = e.altKey;
+    var subtract = e.altKey &&
+        !(drawMode(mode) && !fullLayout.newshape.closed);
 
     var filterPoly, selectionTester, mergedPolygons, currentPolygon;
     var i, searchInfo, eventData;
@@ -514,12 +515,15 @@ function multiTester(list) {
 function coerceSelectionsCache(evt, gd, dragOptions) {
     var fullLayout = gd._fullLayout;
     var plotinfo = dragOptions.plotinfo;
+    var dragmode = dragOptions.dragmode;
 
     var selectingOnSameSubplot = (
         fullLayout._lastSelectedSubplot &&
         fullLayout._lastSelectedSubplot === plotinfo.id
     );
-    var hasModifierKey = evt.shiftKey || evt.altKey;
+
+    var hasModifierKey = (evt.shiftKey || evt.altKey) &&
+        !(drawMode(dragmode) && !fullLayout.newshape.closed);
 
     if(selectingOnSameSubplot && hasModifierKey &&
       (plotinfo.selection && plotinfo.selection.selectionDefs) && !dragOptions.selectionDefs) {
