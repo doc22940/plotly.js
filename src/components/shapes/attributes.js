@@ -235,7 +235,7 @@ module.exports = templatedArray('shape', {
         role: 'info',
         editType: 'arraydraw',
         description: [
-            'Sets the color filling the shape\'s interior.'
+            'Sets the color filling the closed shape\'s interior.'
         ].join(' ')
     },
     editType: 'arraydraw'
