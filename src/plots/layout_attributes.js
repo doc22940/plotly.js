@@ -504,6 +504,13 @@ module.exports = {
             editType: 'none',
             description: 'Specifies whether new shapes are drawn below or above previous shapes in the `layer`.'
         },
+        closed: {
+            valType: 'boolean',
+            dflt: true,
+            role: 'info',
+            editType: 'none',
+            description: 'Specifies whether new shapes are drawn as open or closed paths.'
+        },
         editType: 'none'
     },
 

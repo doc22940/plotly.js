@@ -106,7 +106,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
         .attr('class', function(d) { return 'select-outline select-outline-' + d + ' select-outline-' + plotinfo.id; })
         .style(isDrawMode ? {
             opacity: style.opacity / 2,
-            fill: style.fillcolor,
+            fill: style.closed ? style.fillcolor : undefined,
             stroke: style.line.color,
             'stroke-dasharray': dashStyle(style.line.dash, style.line.width),
             'stroke-width': style.line.width + 'px'
@@ -233,7 +233,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
         }
 
         // display polygons on the screen
-        displayOutlines(mergedPolygons, outlines);
+        displayOutlines(mergedPolygons, outlines, dragOptions);
 
         if(isSelectMode) {
             throttle.throttle(
@@ -400,7 +400,7 @@ function selectOnClick(evt, gd, xAxes, yAxes, subplot, dragOptions, polygonOutli
                 var polygons = dragOptions.mergedPolygons;
 
                 // display polygons on the screen
-                displayOutlines(polygons, polygonOutlines);
+                displayOutlines(polygons, polygonOutlines, dragOptions);
             }
 
             if(sendEvents) {
@@ -611,24 +611,43 @@ function determineSearchTraces(gd, xAxes, yAxes, subplot) {
 
 function displayOutlines(
     polygons, // in
-    outlines  // inout
+    outlines, // inout
+    dragOptions
 ) {
+    var fullLayout = dragOptions.gd._fullLayout;
+    var isOpen = drawMode(dragOptions.dragmode) && !fullLayout.newshape.closed;
+
     var paths = [];
     for(var i = 0; i < polygons.length; i++) {
+        var polygon;
+        if(isOpen) {
+            polygon = [];
+            // skip points in the middle to draw diagonals
+            for(var j = 0; j < polygons[i].length; j += 2) {
+                polygon.push(
+                    polygons[i][j]
+                );
+            }
+        } else {
+            polygon = polygons[i];
+        }
+
         paths.push(
-            providePath(polygons[i])
+            providePath(polygon, isOpen)
         );
     }
 
-    outlines.attr('d', writePaths(paths));
+    outlines.attr('d', writePaths(paths, isOpen));
 }
 
-function providePath(polygon) {
-    return polygon.join('L') + 'L' + polygon[0];
+function providePath(polygon, isOpen) {
+    return polygon.join('L') + (
+        isOpen ? '' : 'L' + polygon[0]
+    );
 }
 
-function writePaths(paths) {
-    return paths.length > 0 ? 'M' + paths.join('M') + 'Z' : 'M0,0Z';
+function writePaths(paths, isOpen) {
+    return paths.length > 0 ? 'M' + paths.join('M') + (isOpen ? '' : 'Z') : 'M0,0Z';
 }
 
 function isMap(plotinfo) {
@@ -641,7 +660,8 @@ function isMap(plotinfo) {
 
 function readPaths(str, size, plotinfo) {
     var allParts = str
-        .substring(1, str.length - 1) // remove M from start and Z from end
+        .replace('Z', '') // remove Z from end
+        .substring(1) // remove M from start
         .split('M');
 
     var map = isMap(plotinfo);
@@ -651,7 +671,7 @@ function readPaths(str, size, plotinfo) {
         var part = allParts[i].split('L');
 
         var path = [];
-        for(var j = 0; j < part.length - 1; j++) { // skip last closing point
+        for(var j = 0; j < part.length; j++) {
             var pos = part[j].split(',');
             var x = pos[0];
             var y = pos[1];
@@ -680,29 +700,29 @@ function readPaths(str, size, plotinfo) {
     return allPaths;
 }
 
-function fixDatesOnPaths(allPaths, xaxis, yaxis) {
+function fixDatesOnPaths(path, xaxis, yaxis) {
     var xIsDate = xaxis.type === 'date';
     var yIsDate = yaxis.type === 'date';
-    if(!xIsDate && !yIsDate) return allPaths;
+    if(!xIsDate && !yIsDate) return path;
 
-    for(var i = 0; i < allPaths.length; i++) {
-        for(var j = 0; j < allPaths[i].length; j++) {
-            if(xIsDate) allPaths[i][j][0] = allPaths[i][j][0].replace(' ', '_');
-            if(yIsDate) allPaths[i][j][1] = allPaths[i][j][1].replace(' ', '_');
-        }
+    for(var i = 0; i < path.length; i++) {
+        if(xIsDate) path[i][0] = path[i][0].replace(' ', '_');
+        if(yIsDate) path[i][1] = path[i][1].replace(' ', '_');
     }
 
-    return allPaths;
+    return path;
 }
 
 function addShape(outlines, dragOptions, opts) {
     if(!outlines.length) return;
     var gd = dragOptions.gd;
     var style = gd._fullLayout.newshape;
+    var isOpen = !style.closed;
     var onPaper = opts.onPaper;
     var plotinfo = dragOptions.plotinfo;
     var xaxis = plotinfo.xaxis;
     var yaxis = plotinfo.yaxis;
+    var isRectMode = rectMode(dragOptions.dragmode);
 
     var e = outlines[0][0]; // pick first
     if(!e) return;
@@ -716,7 +736,9 @@ function addShape(outlines, dragOptions, opts) {
     var polygons = readPaths(d, fullLayout._size, (map || onPaper) ? undefined : plotinfo);
 
     for(var i = 0; i < polygons.length; i++) {
-        if(polygons[i].length < 2) continue;
+        var polygon = polygons[i];
+        var len = polygon.length - (isOpen ? 0 : 1); // skip closing point
+        if(len < 2) continue;
 
         var shape = {
             xref: (map || onPaper) ? 'paper' : xaxis._id,
@@ -724,7 +746,7 @@ function addShape(outlines, dragOptions, opts) {
 
             layer: style.layer,
             opacity: style.opacity,
-            fillcolor: style.fillcolor,
+            fillcolor: isOpen ? undefined : style.fillcolor,
             line: {
                 color: style.line.color,
                 width: style.line.width,
@@ -732,20 +754,25 @@ function addShape(outlines, dragOptions, opts) {
             }
         };
 
-        if(
-            polygons[i].length === 4 &&
-            rectMode(dragOptions.dragmode)
-        ) {
+        if(len === 4 && isRectMode) {
+            // pick start and end points from diagonal
             shape.x0 = polygons[i][0][0];
-            shape.x1 = polygons[i][2][0];
             shape.y0 = polygons[i][0][1];
+            shape.x1 = polygons[i][2][0];
             shape.y1 = polygons[i][2][1];
+        } else if(len === 2 && isRectMode && isOpen) {
+            shape.x0 = polygons[i][0][0];
+            shape.y0 = polygons[i][0][1];
+            shape.x1 = polygons[i][1][0];
+            shape.y1 = polygons[i][1][1];
+
+            shape.type = 'line';
         } else {
-            fixDatesOnPaths(polygons, xaxis, yaxis);
+            fixDatesOnPaths(polygon, xaxis, yaxis);
 
             shape.path = writePaths([
-                providePath(polygons[i])
-            ]);
+                providePath(polygon, isOpen)
+            ], isOpen);
         }
 
         newShapes.push(shape);
