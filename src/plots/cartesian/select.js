@@ -271,6 +271,8 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
     };
 
     dragOptions.clickFn = function(numClicks, evt) {
+        if(isDrawMode) return;
+
         var clickmode = fullLayout.clickmode;
 
         corners.remove();
