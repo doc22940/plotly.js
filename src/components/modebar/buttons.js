@@ -134,21 +134,21 @@ modeBarButtons.lasso2d = {
     click: handleCartesian
 };
 
-modeBarButtons.free2d = {
-    name: 'free2d',
-    title: function(gd) { return _(gd, 'Draw Freeform'); },
+modeBarButtons.freedraw = {
+    name: 'freedraw',
+    title: function(gd) { return _(gd, 'Freeform Draw'); },
     attr: 'dragmode',
-    val: 'draw-freeform',
-    icon: Icons.draw_freeform,
+    val: 'freedraw',
+    icon: Icons.freedraw,
     click: handleCartesian
 };
 
-modeBarButtons.rect2d = {
-    name: 'rect2d',
-    title: function(gd) { return _(gd, 'Draw Rectangle'); },
+modeBarButtons.sizedraw = {
+    name: 'sizedraw',
+    title: function(gd) { return _(gd, 'Geometric Draw'); },
     attr: 'dragmode',
-    val: 'draw-rectangle',
-    icon: Icons.draw_rectangle,
+    val: 'sizedraw',
+    icon: Icons.sizedraw,
     click: handleCartesian
 };
 

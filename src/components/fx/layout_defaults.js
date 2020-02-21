@@ -21,7 +21,7 @@ module.exports = function supplyLayoutDefaults(layoutIn, layoutOut, fullData) {
     var dragMode = coerce('dragmode');
     if(
         dragMode === 'select' ||
-        dragMode === 'draw-rectangle'
+        dragMode === 'sizedraw'
     ) {
         coerce('selectdirection');
     }

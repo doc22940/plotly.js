@@ -19,22 +19,22 @@ exports.selectMode = function(dragmode) {
 
 exports.drawMode = function(dragmode) {
     return (
-        dragmode === 'draw-freeform' ||
-        dragmode === 'draw-rectangle'
+        dragmode === 'freedraw' ||
+        dragmode === 'sizedraw'
     );
 };
 
 exports.rectMode = function(dragmode) {
     return (
         dragmode === 'select' ||
-        dragmode === 'draw-rectangle'
+        dragmode === 'sizedraw'
     );
 };
 
 exports.freeMode = function(dragmode) {
     return (
         dragmode === 'lasso' ||
-        dragmode === 'draw-freeform'
+        dragmode === 'freedraw'
     );
 };
 

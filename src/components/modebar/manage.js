@@ -168,7 +168,7 @@ function getButtonGroups(gd) {
         dragModeGroup.push('select2d', 'lasso2d');
     }
     if(isDrawable(fullLayout)) {
-        dragModeGroup.push('rect2d', 'free2d');
+        dragModeGroup.push('sizedraw', 'freedraw');
     }
 
     addGroup(dragModeGroup);
