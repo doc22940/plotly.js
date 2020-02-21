@@ -176,6 +176,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
         var dy = Math.abs(y1 - y0);
 
         if(isRectMode) {
+            var isLine = isDrawMode && !drwStyle.closed;
             var direction = fullLayout.selectdirection;
 
             if(fullLayout.selectdirection === 'any') {
@@ -187,10 +188,13 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
             }
 
             if(direction === 'h') {
-                // horizontal motion: make a vertical box
-                currentPolygon = [[x0, 0], [x0, ph], [x1, ph], [x1, 0]];
-                currentPolygon.xmin = Math.min(x0, x1);
-                currentPolygon.xmax = Math.max(x0, x1);
+                // horizontal motion
+                currentPolygon = isLine ?
+                    [[x1, 0], [x1, ph]] : // using x1 instead of x0 allows adjusting the line while drawing
+                    [[x0, 0], [x0, ph], [x1, ph], [x1, 0]]; // make a vertical box
+
+                currentPolygon.xmin = isLine ? x1 : Math.min(x0, x1);
+                currentPolygon.xmax = isLine ? x1 : Math.max(x0, x1);
                 currentPolygon.ymin = Math.min(0, ph);
                 currentPolygon.ymax = Math.max(0, ph);
                 // extras to guide users in keeping a straight selection
@@ -199,19 +203,25 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
                     'M' + (currentPolygon.xmax - 1) + ',' + (y0 - MINSELECT) +
                     'h4v' + (2 * MINSELECT) + 'h-4Z');
             } else if(direction === 'v') {
-                // vertical motion: make a horizontal box
-                currentPolygon = [[0, y0], [0, y1], [pw, y1], [pw, y0]];
+                // vertical motion
+                currentPolygon = isLine ?
+                    [[0, y1], [pw, y1]] : // using y1 instead of y0 allows adjusting the line while drawing
+                    [[0, y0], [0, y1], [pw, y1], [pw, y0]]; // make a horizontal box
+
                 currentPolygon.xmin = Math.min(0, pw);
                 currentPolygon.xmax = Math.max(0, pw);
-                currentPolygon.ymin = Math.min(y0, y1);
-                currentPolygon.ymax = Math.max(y0, y1);
+                currentPolygon.ymin = isLine ? y1 : Math.min(y0, y1);
+                currentPolygon.ymax = isLine ? y1 : Math.max(y0, y1);
                 corners.attr('d', 'M' + (x0 - MINSELECT) + ',' + currentPolygon.ymin +
                     'v-4h' + (2 * MINSELECT) + 'v4Z' +
                     'M' + (x0 - MINSELECT) + ',' + (currentPolygon.ymax - 1) +
                     'v4h' + (2 * MINSELECT) + 'v-4Z');
             } else if(direction === 'd') {
                 // diagonal motion
-                currentPolygon = [[x0, y0], [x0, y1], [x1, y1], [x1, y0]];
+                currentPolygon = isLine ?
+                    [[x0, y0], [x1, y1]] :
+                    [[x0, y0], [x0, y1], [x1, y1], [x1, y0]];
+
                 currentPolygon.xmin = Math.min(x0, x1);
                 currentPolygon.xmax = Math.max(x0, x1);
                 currentPolygon.ymin = Math.min(y0, y1);
@@ -625,21 +635,8 @@ function displayOutlines(
 
     var paths = [];
     for(var i = 0; i < polygons.length; i++) {
-        var polygon;
-        if(isOpen) {
-            polygon = [];
-            // skip points in the middle to draw diagonals
-            for(var j = 0; j < polygons[i].length; j += 2) {
-                polygon.push(
-                    polygons[i][j]
-                );
-            }
-        } else {
-            polygon = polygons[i];
-        }
-
         paths.push(
-            providePath(polygon, isOpen)
+            providePath(polygons[i], isOpen)
         );
     }
 
