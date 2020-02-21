@@ -32,6 +32,7 @@ var redrawReglTraces = require('../../plot_api/subroutines').redrawReglTraces;
 
 var constants = require('./constants');
 var MINSELECT = constants.MINSELECT;
+var CIRCLE_SIDES = 24; // should be divisible by 4
 
 var filteredPolygon = polygon.filter;
 var polygonTester = polygon.tester;
@@ -177,6 +178,9 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
 
         if(isRectMode) {
             var isLine = isDrawMode && !drwStyle.closed;
+            var isEllipse = isDrawMode && drwStyle.closed && drwStyle.ellipse;
+            var isLineOrEllipse = isLine || isEllipse; // cases with two start & end positions
+
             var direction;
             var start, end;
 
@@ -229,12 +233,12 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
 
             if(direction === 'h') {
                 // horizontal motion
-                currentPolygon = isLine ?
-                    [[x1, start], [x1, end]] : // using x1 instead of x0 allows adjusting the line while drawing
+                currentPolygon = isLineOrEllipse ?
+                    handleEllipse(isEllipse, [x1, start], [x1, end]) : // using x1 instead of x0 allows adjusting the line while drawing
                     [[x0, start], [x0, end], [x1, end], [x1, start]]; // make a vertical box
 
-                currentPolygon.xmin = isLine ? x1 : Math.min(x0, x1);
-                currentPolygon.xmax = isLine ? x1 : Math.max(x0, x1);
+                currentPolygon.xmin = isLineOrEllipse ? x1 : Math.min(x0, x1);
+                currentPolygon.xmax = isLineOrEllipse ? x1 : Math.max(x0, x1);
                 currentPolygon.ymin = Math.min(start, end);
                 currentPolygon.ymax = Math.max(start, end);
                 // extras to guide users in keeping a straight selection
@@ -244,22 +248,22 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
                     'h4v' + (2 * MINSELECT) + 'h-4Z');
             } else if(direction === 'v') {
                 // vertical motion
-                currentPolygon = isLine ?
-                    [[start, y1], [end, y1]] : // using y1 instead of y0 allows adjusting the line while drawing
+                currentPolygon = isLineOrEllipse ?
+                    handleEllipse(isEllipse, [start, y1], [end, y1]) : // using y1 instead of y0 allows adjusting the line while drawing
                     [[start, y0], [start, y1], [end, y1], [end, y0]]; // make a horizontal box
 
                 currentPolygon.xmin = Math.min(start, end);
                 currentPolygon.xmax = Math.max(start, end);
-                currentPolygon.ymin = isLine ? y1 : Math.min(y0, y1);
-                currentPolygon.ymax = isLine ? y1 : Math.max(y0, y1);
+                currentPolygon.ymin = isLineOrEllipse ? y1 : Math.min(y0, y1);
+                currentPolygon.ymax = isLineOrEllipse ? y1 : Math.max(y0, y1);
                 corners.attr('d', 'M' + (x0 - MINSELECT) + ',' + currentPolygon.ymin +
                     'v-4h' + (2 * MINSELECT) + 'v4Z' +
                     'M' + (x0 - MINSELECT) + ',' + (currentPolygon.ymax - 1) +
                     'v4h' + (2 * MINSELECT) + 'v-4Z');
             } else if(direction === 'd') {
                 // diagonal motion
-                currentPolygon = isLine ?
-                    [[x0, y0], [x1, y1]] :
+                currentPolygon = isLineOrEllipse ?
+                    handleEllipse(isEllipse, [x0, y0], [x1, y1]) :
                     [[x0, y0], [x0, y1], [x1, y1], [x1, y0]];
 
                 currentPolygon.xmin = Math.min(x0, x1);
@@ -756,6 +760,59 @@ function fixDatesOnPaths(path, xaxis, yaxis) {
     return path;
 }
 
+function handleEllipse(isEllipse, start, end) {
+    if(!isEllipse) return [start, end]; // i.e. case of line
+
+    var pos = ellipseOver({
+        x0: start[0],
+        y0: start[1],
+        x1: end[0],
+        y1: end[1]
+    });
+
+    var cx = (pos.x1 + pos.x0) / 2;
+    var cy = (pos.y1 + pos.y0) / 2;
+    var rx = (pos.x1 - pos.x0) / 2;
+    var ry = (pos.y1 - pos.y0) / 2;
+
+    var polygon = [];
+    for(var i = 0; i <= CIRCLE_SIDES; i++) {
+        var t = i * 2 * Math.PI / CIRCLE_SIDES;
+        polygon.push([
+            cx + rx * Math.cos(t),
+            cy + ry * Math.sin(t),
+        ]);
+    }
+    return polygon;
+}
+
+function ellipseOver(pos) {
+    var x0 = pos.x0;
+    var y0 = pos.y0;
+    var x1 = pos.x1;
+    var y1 = pos.y1;
+
+    var dx = x1 - x0;
+    var dy = y1 - y0;
+
+    x0 -= dx;
+    y0 -= dy;
+
+    var cx = (x0 + x1) / 2;
+    var cy = (y0 + y1) / 2;
+
+    var scale = Math.sqrt(2);
+    dx *= scale;
+    dy *= scale;
+
+    return {
+        x0: cx - dx,
+        y0: cy - dy,
+        x1: cx + dx,
+        y1: cy + dy
+    };
+}
+
 function addShape(outlines, dragOptions, opts) {
     if(!outlines.length) return;
     var gd = dragOptions.gd;
@@ -765,7 +822,8 @@ function addShape(outlines, dragOptions, opts) {
     var plotinfo = dragOptions.plotinfo;
     var xaxis = plotinfo.xaxis;
     var yaxis = plotinfo.yaxis;
-    var isRectMode = rectMode(dragOptions.dragmode);
+    var dragmode = dragOptions.dragmode;
+    var isRectMode = rectMode(dragmode);
 
     var e = outlines[0][0]; // pick first
     if(!e) return;
@@ -801,7 +859,21 @@ function addShape(outlines, dragOptions, opts) {
             shape.fillrule = drwStyle.fillrule;
         }
 
-        if(len === 4 && isRectMode) {
+        if(len === CIRCLE_SIDES + 1 && isRectMode && drwStyle.ellipse) {
+            shape.type = 'circle'; // an ellipse!
+            var j = Math.floor(CIRCLE_SIDES / 2);
+            var k = Math.floor(CIRCLE_SIDES / 8);
+            var pos = ellipseOver({
+                x0: (polygons[i][0][0] + polygons[i][j][0]) / 2,
+                y0: (polygons[i][0][1] + polygons[i][j][1]) / 2,
+                x1: polygons[i][k][0],
+                y1: polygons[i][k][1],
+            });
+            shape.x0 = pos.x0;
+            shape.y0 = pos.y0;
+            shape.x1 = pos.x1;
+            shape.y1 = pos.y1;
+        } else if(len === 4 && isRectMode) {
             shape.type = 'rect';
             shape.x0 = polygons[i][0][0];
             shape.y0 = polygons[i][0][1];

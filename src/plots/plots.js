@@ -1524,6 +1524,7 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
     coerce('modebar.uirevision', uirevision);
 
     coerce('newshape.sizedirection');
+    coerce('newshape.ellipse');
     coerce('newshape.closed');
     coerce('newshape.order');
     coerce('newshape.layer');

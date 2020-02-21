@@ -522,7 +522,16 @@ module.exports = {
             editType: 'none',
             description: 'Specifies whether new shapes are drawn as open or closed paths.'
         },
-
+        ellipse: {
+            valType: 'boolean',
+            dflt: false,
+            role: 'info',
+            editType: 'none',
+            description: [
+                'Specifies whether ellipses are drawn instead of rectangles,',
+                'when using *sizedraw* `dragmode`.'
+            ].join(' ')
+        },
         sizedirection: {
             valType: 'enumerated',
             role: 'info',
@@ -530,7 +539,7 @@ module.exports = {
             dflt: 'd',
             editType: 'none',
             description: [
-                'When *dragmode* is set to *sizedraw*, this limits the drag to be',
+                'When `dragmode` is set to *sizedraw*, this limits the drag to be',
                 'horizontal, vertical or diagonal.',
                 'Using *d* there is no limit e.g. in drawing diagonal lines.',
                 '*ortho* limits the draw to be either horizontal or vertical.',
