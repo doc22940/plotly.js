@@ -460,7 +460,7 @@ module.exports = {
             width: {
                 valType: 'number',
                 min: 0,
-                dflt: 2,
+                dflt: 3,
                 role: 'info',
                 editType: 'none',
                 description: 'Sets the line width (in px).'
@@ -522,6 +522,23 @@ module.exports = {
             editType: 'none',
             description: 'Specifies whether new shapes are drawn as open or closed paths.'
         },
+
+        sizedirection: {
+            valType: 'enumerated',
+            role: 'info',
+            values: ['ortho', 'h', 'v', 'd'],
+            dflt: 'd',
+            editType: 'none',
+            description: [
+                'When *dragmode* is set to *sizedraw*, this limits the drag to be',
+                'horizontal, vertical or diagonal.',
+                'Using *d* there is no limit e.g. in drawing diagonal lines.',
+                '*ortho* limits the draw to be either horizontal or vertical.',
+                '*h* allows a horizontal span.',
+                '*v* allows a vertical span.'
+            ].join(' ')
+        },
+
         editType: 'none'
     },
 

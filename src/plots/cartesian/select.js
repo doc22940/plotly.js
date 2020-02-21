@@ -177,26 +177,66 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
 
         if(isRectMode) {
             var isLine = isDrawMode && !drwStyle.closed;
-            var direction = fullLayout.selectdirection;
+            var direction;
+            var start, end;
 
-            if(fullLayout.selectdirection === 'any') {
-                if(dy < Math.min(dx * 0.6, MINSELECT)) direction = 'h';
-                else if(dx < Math.min(dy * 0.6, MINSELECT)) direction = 'v';
-                else direction = 'd';
-            } else {
+            if(isSelectMode) {
                 direction = fullLayout.selectdirection;
+
+                if(direction === 'any') {
+                    if(dy < Math.min(dx * 0.6, MINSELECT)) {
+                        direction = 'h';
+                        start = 0;
+                        end = ph;
+                    } else if(dx < Math.min(dy * 0.6, MINSELECT)) {
+                        direction = 'v';
+                        start = 0;
+                        end = pw;
+                    } else {
+                        direction = 'd';
+                    }
+                }
+            }
+
+            if(isDrawMode) {
+                direction = fullLayout.newshape.sizedirection;
+                // should swap h and v here as they have different meaning when drawing
+                if(direction === 'h') direction = 'v';
+                else if(direction === 'v') direction = 'h';
+
+                switch(direction) {
+                    case 'h':
+                        start = 0;
+                        end = ph;
+                        break;
+                    case 'v':
+                        start = 0;
+                        end = pw;
+                        break;
+                    case 'ortho':
+                        if(dx < dy) {
+                            direction = 'h';
+                            start = y0;
+                            end = y1;
+                        } else {
+                            direction = 'v';
+                            start = x0;
+                            end = x1;
+                        }
+                        break;
+                }
             }
 
             if(direction === 'h') {
                 // horizontal motion
                 currentPolygon = isLine ?
-                    [[x1, 0], [x1, ph]] : // using x1 instead of x0 allows adjusting the line while drawing
-                    [[x0, 0], [x0, ph], [x1, ph], [x1, 0]]; // make a vertical box
+                    [[x1, start], [x1, end]] : // using x1 instead of x0 allows adjusting the line while drawing
+                    [[x0, start], [x0, end], [x1, end], [x1, start]]; // make a vertical box
 
                 currentPolygon.xmin = isLine ? x1 : Math.min(x0, x1);
                 currentPolygon.xmax = isLine ? x1 : Math.max(x0, x1);
-                currentPolygon.ymin = Math.min(0, ph);
-                currentPolygon.ymax = Math.max(0, ph);
+                currentPolygon.ymin = Math.min(start, end);
+                currentPolygon.ymax = Math.max(start, end);
                 // extras to guide users in keeping a straight selection
                 corners.attr('d', 'M' + currentPolygon.xmin + ',' + (y0 - MINSELECT) +
                     'h-4v' + (2 * MINSELECT) + 'h4Z' +
@@ -205,11 +245,11 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
             } else if(direction === 'v') {
                 // vertical motion
                 currentPolygon = isLine ?
-                    [[0, y1], [pw, y1]] : // using y1 instead of y0 allows adjusting the line while drawing
-                    [[0, y0], [0, y1], [pw, y1], [pw, y0]]; // make a horizontal box
+                    [[start, y1], [end, y1]] : // using y1 instead of y0 allows adjusting the line while drawing
+                    [[start, y0], [start, y1], [end, y1], [end, y0]]; // make a horizontal box
 
-                currentPolygon.xmin = Math.min(0, pw);
-                currentPolygon.xmax = Math.max(0, pw);
+                currentPolygon.xmin = Math.min(start, end);
+                currentPolygon.xmax = Math.max(start, end);
                 currentPolygon.ymin = isLine ? y1 : Math.min(y0, y1);
                 currentPolygon.ymax = isLine ? y1 : Math.max(y0, y1);
                 corners.attr('d', 'M' + (x0 - MINSELECT) + ',' + currentPolygon.ymin +
@@ -762,19 +802,19 @@ function addShape(outlines, dragOptions, opts) {
         }
 
         if(len === 4 && isRectMode) {
-            // pick start and end points from diagonal
+            shape.type = 'rect';
             shape.x0 = polygons[i][0][0];
             shape.y0 = polygons[i][0][1];
             shape.x1 = polygons[i][2][0];
             shape.y1 = polygons[i][2][1];
         } else if(len === 2 && isRectMode && isOpen) {
+            shape.type = 'line';
             shape.x0 = polygons[i][0][0];
             shape.y0 = polygons[i][0][1];
             shape.x1 = polygons[i][1][0];
             shape.y1 = polygons[i][1][1];
-
-            shape.type = 'line';
         } else {
+            shape.type = 'path';
             fixDatesOnPaths(polygon, xaxis, yaxis);
 
             shape.path = writePaths([

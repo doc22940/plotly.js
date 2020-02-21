@@ -161,7 +161,7 @@ module.exports = {
         values: ['h', 'v', 'd', 'any'],
         dflt: 'any',
         description: [
-            'When *dragmode* is set to *select* or *sizedraw*, this limits the selection of the drag to',
+            'When *dragmode* is set to *select*, this limits the selection of the drag to',
             'horizontal, vertical or diagonal. *h* only allows horizontal selection,',
             '*v* only vertical, *d* only diagonal and *any* sets no limit.'
         ].join(' '),

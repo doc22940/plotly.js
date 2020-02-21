@@ -19,12 +19,7 @@ module.exports = function supplyLayoutDefaults(layoutIn, layoutOut, fullData) {
     var clickmode = coerce('clickmode');
 
     var dragMode = coerce('dragmode');
-    if(
-        dragMode === 'select' ||
-        dragMode === 'sizedraw'
-    ) {
-        coerce('selectdirection');
-    }
+    if(dragMode === 'select') coerce('selectdirection');
 
     var hovermodeDflt;
     if(layoutOut._has('cartesian')) {
