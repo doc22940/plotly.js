@@ -100,19 +100,19 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
     }
 
     var outlines = zoomLayer.selectAll('path.select-outline-' + plotinfo.id).data(isDrawMode ? [0] : [1, 2]);
-    var style = fullLayout.newshape;
+    var drwStyle = fullLayout.newshape;
 
     outlines.enter()
         .append('path')
         .attr('class', function(d) { return 'select-outline select-outline-' + d + ' select-outline-' + plotinfo.id; })
         .style(isDrawMode ? {
-            opacity: style.opacity / 2,
-            fill: style.closed ? style.fillcolor : undefined,
-            stroke: style.line.color,
-            'stroke-dasharray': dashStyle(style.line.dash, style.line.width),
-            'stroke-width': style.line.width + 'px'
+            opacity: drwStyle.opacity / 2,
+            fill: drwStyle.closed ? drwStyle.fillcolor : undefined,
+            stroke: drwStyle.line.color,
+            'stroke-dasharray': dashStyle(drwStyle.line.dash, drwStyle.line.width),
+            'stroke-width': drwStyle.line.width + 'px'
         } : {})
-        .attr('fill-rule', style.fillrule)
+        .attr('fill-rule', drwStyle.fillrule)
         .attr('transform', 'translate(' + xs + ', ' + ys + ')')
         .attr('d', path0 + 'Z');
 
@@ -722,8 +722,8 @@ function fixDatesOnPaths(path, xaxis, yaxis) {
 function addShape(outlines, dragOptions, opts) {
     if(!outlines.length) return;
     var gd = dragOptions.gd;
-    var style = gd._fullLayout.newshape;
-    var isOpen = !style.closed;
+    var drwStyle = gd._fullLayout.newshape;
+    var isOpen = !drwStyle.closed;
     var onPaper = opts.onPaper;
     var plotinfo = dragOptions.plotinfo;
     var xaxis = plotinfo.xaxis;
@@ -750,18 +750,18 @@ function addShape(outlines, dragOptions, opts) {
             xref: (map || onPaper) ? 'paper' : xaxis._id,
             yref: (map || onPaper) ? 'paper' : yaxis._id,
 
-            layer: style.layer,
-            opacity: style.opacity,
+            layer: drwStyle.layer,
+            opacity: drwStyle.opacity,
             line: {
-                color: style.line.color,
-                width: style.line.width,
-                dash: style.line.dash
+                color: drwStyle.line.color,
+                width: drwStyle.line.width,
+                dash: drwStyle.line.dash
             }
         };
 
         if(!isOpen) {
-            shape.fillcolor = style.fillcolor;
-            shape.fillrule = style.fillrule;
+            shape.fillcolor = drwStyle.fillcolor;
+            shape.fillrule = drwStyle.fillrule;
         }
 
         if(len === 4 && isRectMode) {
@@ -792,7 +792,7 @@ function addShape(outlines, dragOptions, opts) {
         var oldShapes = fullLayout.shapes;
 
         Registry.call('relayout', gd, {
-            shapes: style.order === 'back' ?
+            shapes: drwStyle.order === 'back' ?
                 (newShapes).concat(oldShapes) : // add newShapes to the start
                 (oldShapes).concat(newShapes)   // add newShapes to the end
         });
