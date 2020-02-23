@@ -32,7 +32,7 @@ var redrawReglTraces = require('../../plot_api/subroutines').redrawReglTraces;
 
 var constants = require('./constants');
 var MINSELECT = constants.MINSELECT;
-var CIRCLE_SIDES = 60; // should be divisible by 8
+var CIRCLE_SIDES = 32; // should be divisible by 8
 var SQRT2 = Math.sqrt(2);
 
 var filteredPolygon = polygon.filter;
@@ -615,8 +615,9 @@ function clearSelectionsCache(dragOptions) {
 
     if(drawMode(dragmode)) {
         var gd = dragOptions.gd;
-
-        var outlines = gd._fullLayout._zoomlayer.selectAll('.select-outline-' + plotinfo.id);
+        var fullLayout = gd._fullLayout;
+        var zoomLayer = fullLayout._zoomlayer;
+        var outlines = zoomLayer.selectAll('.select-outline-' + plotinfo.id);
         if(outlines) {
             // add shape
             addShape(outlines, dragOptions, {
@@ -687,16 +688,47 @@ function displayOutlines(
     dragOptions
 ) {
     var fullLayout = dragOptions.gd._fullLayout;
-    var isOpen = drawMode(dragOptions.dragmode) && !fullLayout.newshape.closed;
+    var isDrawMode = drawMode(dragOptions.dragmode);
+    var isOpen = isDrawMode && !fullLayout.newshape.closed;
+    var i;
 
     var paths = [];
-    for(var i = 0; i < polygons.length; i++) {
+    for(i = 0; i < polygons.length; i++) {
+        // create outline path
         paths.push(
             providePath(polygons[i], isOpen)
         );
     }
 
+    // make outline
     outlines.attr('d', writePaths(paths, isOpen));
+
+    var zoomLayer = fullLayout._zoomlayer;
+    zoomLayer.selectAll('.outline-vertices').remove();
+
+    if(isDrawMode) {
+        var plotinfo = dragOptions.plotinfo;
+        var xs = plotinfo.xaxis._offset;
+        var ys = plotinfo.yaxis._offset;
+
+        for(i = 0; i < polygons.length; i++) {
+            for(var j = 0; j < polygons[i].length; j++) {
+                var pos = polygons[i][j];
+
+                zoomLayer.append('circle')
+                .attr('class', 'outline-vertices')
+                .attr('transform', 'translate(' + xs + ', ' + ys + ')')
+                .attr('cx', pos[0])
+                .attr('cy', pos[1])
+                .attr('r', 5)
+                .style({
+                    fill: 'red',
+                    stroke: 'white',
+                    'stroke-width': 1
+                });
+            }
+        }
+    }
 }
 
 function providePath(polygon, isOpen) {
@@ -792,7 +824,7 @@ function handleEllipse(isEllipse, start, end) {
     if(!ry) ry = rx = rx / SQRT2;
 
     var polygon = [];
-    for(var i = 0; i <= CIRCLE_SIDES; i++) {
+    for(var i = 0; i < CIRCLE_SIDES; i++) {
         var t = i * 2 * Math.PI / CIRCLE_SIDES;
         polygon.push([
             cx + rx * Math.cos(t),
@@ -875,10 +907,10 @@ function addShape(outlines, dragOptions, opts) {
             shape.fillrule = drwStyle.fillrule;
         }
 
-        if(len === CIRCLE_SIDES + 1 && isRectMode && drwStyle.ellipse) {
+        if(len === CIRCLE_SIDES && isRectMode && drwStyle.ellipse) {
             shape.type = 'circle'; // an ellipse!
-            var j = Math.floor(CIRCLE_SIDES / 2);
-            var k = Math.floor(CIRCLE_SIDES / 8);
+            var j = Math.floor((CIRCLE_SIDES + 1) / 2);
+            var k = Math.floor((CIRCLE_SIDES + 1) / 8);
             var pos = ellipseOver({
                 x0: (polygons[i][0][0] + polygons[i][j][0]) / 2,
                 y0: (polygons[i][0][1] + polygons[i][j][1]) / 2,
@@ -914,6 +946,9 @@ function addShape(outlines, dragOptions, opts) {
     }
 
     if(newShapes.length) {
+        var zoomLayer = fullLayout._zoomlayer;
+        zoomLayer.selectAll('.outline-vertices').remove();
+
         var oldShapes = fullLayout.shapes;
 
         Registry.call('relayout', gd, {
@@ -1150,9 +1185,9 @@ function fillSelectionItem(selection, searchInfo) {
 // at the end.
 function clearSelect(gd) {
     var fullLayout = gd._fullLayout || {};
-    var zoomlayer = fullLayout._zoomlayer;
-    if(zoomlayer) {
-        zoomlayer.selectAll('.select-outline').remove();
+    var zoomLayer = fullLayout._zoomlayer;
+    if(zoomLayer) {
+        zoomLayer.selectAll('.select-outline').remove();
     }
 }
 
