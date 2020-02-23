@@ -1523,8 +1523,8 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
     coerce('modebar.activecolor', Color.addOpacity(modebarDefaultColor, 0.7));
     coerce('modebar.uirevision', uirevision);
 
-    coerce('newshape.sizedirection');
-    coerce('newshape.ellipse');
+    coerce('newshape.drawdirection');
+    coerce('newshape.drawshape');
     coerce('newshape.closed');
     coerce('newshape.order');
     coerce('newshape.layer');

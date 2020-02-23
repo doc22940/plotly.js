@@ -181,7 +181,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
             var isLine = isDrawMode && !drwStyle.closed;
             var isEllipse = (
                 (isSelectMode && fullLayout.selectshape === 'circular') ||
-                (isDrawMode && drwStyle.ellipse && drwStyle.closed)
+                (isDrawMode && drwStyle.drawshape === 'circular' && drwStyle.closed)
             );
             var isLineOrEllipse = isLine || isEllipse; // cases with two start & end positions
 
@@ -216,7 +216,7 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
             }
 
             if(isDrawMode) {
-                switch(fullLayout.newshape.sizedirection) {
+                switch(fullLayout.newshape.drawdirection) {
                     case 'vertical':
                         direction = 'h';
                         start = isEllipse ? ph / 2 : 0;
@@ -907,7 +907,8 @@ function addShape(outlines, dragOptions, opts) {
             shape.fillrule = drwStyle.fillrule;
         }
 
-        if(len === CIRCLE_SIDES && isRectMode && drwStyle.ellipse &&
+        if(len === CIRCLE_SIDES &&
+            isRectMode && drwStyle.drawshape === 'circular' &&
             xaxis.type !== 'log' && yaxis.type !== 'log' &&
             xaxis.type !== 'date' && yaxis.type !== 'date'
             // TODO: ensure the circle was not modified

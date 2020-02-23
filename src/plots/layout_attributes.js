@@ -522,9 +522,10 @@ module.exports = {
             editType: 'none',
             description: 'Specifies whether new shapes are drawn as open or closed paths.'
         },
-        ellipse: {
-            valType: 'boolean',
-            dflt: false,
+        drawshape: { // similar to selectshape
+            valType: 'enumerated',
+            values: ['box', 'circular'],
+            dflt: 'box',
             role: 'info',
             editType: 'none',
             description: [
@@ -532,7 +533,7 @@ module.exports = {
                 'when using *sizedraw* `dragmode`.'
             ].join(' ')
         },
-        sizedirection: {
+        drawdirection: {
             valType: 'enumerated',
             role: 'info',
             values: ['ortho', 'horizontal', 'vertical', 'diagonal'],
