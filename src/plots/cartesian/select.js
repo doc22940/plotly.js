@@ -907,7 +907,11 @@ function addShape(outlines, dragOptions, opts) {
             shape.fillrule = drwStyle.fillrule;
         }
 
-        if(len === CIRCLE_SIDES && isRectMode && drwStyle.ellipse) {
+        if(len === CIRCLE_SIDES && isRectMode && drwStyle.ellipse &&
+            xaxis.type !== 'log' && yaxis.type !== 'log' &&
+            xaxis.type !== 'date' && yaxis.type !== 'date'
+            // TODO: ensure the circle was not modified
+        ) {
             shape.type = 'circle'; // an ellipse!
             var j = Math.floor((CIRCLE_SIDES + 1) / 2);
             var k = Math.floor((CIRCLE_SIDES + 1) / 8);
