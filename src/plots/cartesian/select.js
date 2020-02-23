@@ -32,7 +32,8 @@ var redrawReglTraces = require('../../plot_api/subroutines').redrawReglTraces;
 
 var constants = require('./constants');
 var MINSELECT = constants.MINSELECT;
-var CIRCLE_SIDES = 24; // should be divisible by 4
+var CIRCLE_SIDES = 24; // should be divisible by 8
+var SQRT2 = Math.sqrt(2);
 
 var filteredPolygon = polygon.filter;
 var polygonTester = polygon.tester;
@@ -203,18 +204,15 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
             }
 
             if(isDrawMode) {
-                direction = fullLayout.newshape.sizedirection;
-                // should swap h and v here as they have different meaning when drawing
-                if(direction === 'h') direction = 'v';
-                else if(direction === 'v') direction = 'h';
-
-                switch(direction) {
-                    case 'h':
-                        start = 0;
+                switch(fullLayout.newshape.sizedirection) {
+                    case 'vertical':
+                        direction = 'h';
+                        start = isEllipse ? ph / 2 : 0;
                         end = ph;
                         break;
-                    case 'v':
-                        start = 0;
+                    case 'horizontal':
+                        direction = 'v';
+                        start = isEllipse ? pw / 2 : 0;
                         end = pw;
                         break;
                     case 'ortho':
@@ -228,6 +226,8 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
                             end = x1;
                         }
                         break;
+                    default: // i.e. case of 'diagonal'
+                        direction = 'd';
                 }
             }
 
@@ -775,6 +775,10 @@ function handleEllipse(isEllipse, start, end) {
     var rx = (pos.x1 - pos.x0) / 2;
     var ry = (pos.y1 - pos.y0) / 2;
 
+    // make a circle when one dimension is zero
+    if(!rx) rx = ry = ry / SQRT2;
+    if(!ry) ry = rx = rx / SQRT2;
+
     var polygon = [];
     for(var i = 0; i <= CIRCLE_SIDES; i++) {
         var t = i * 2 * Math.PI / CIRCLE_SIDES;
@@ -801,7 +805,7 @@ function ellipseOver(pos) {
     var cx = (x0 + x1) / 2;
     var cy = (y0 + y1) / 2;
 
-    var scale = Math.sqrt(2);
+    var scale = SQRT2;
     dx *= scale;
     dy *= scale;
 

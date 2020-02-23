@@ -535,16 +535,16 @@ module.exports = {
         sizedirection: {
             valType: 'enumerated',
             role: 'info',
-            values: ['ortho', 'h', 'v', 'd'],
-            dflt: 'd',
+            values: ['ortho', 'horizontal', 'vertical', 'diagonal'],
+            dflt: 'diagonal',
             editType: 'none',
             description: [
                 'When `dragmode` is set to *sizedraw*, this limits the drag to be',
                 'horizontal, vertical or diagonal.',
-                'Using *d* there is no limit e.g. in drawing diagonal lines.',
+                'Using *diagonal* there is no limit e.g. in drawing lines in any direction.',
                 '*ortho* limits the draw to be either horizontal or vertical.',
-                '*h* allows a horizontal span.',
-                '*v* allows a vertical span.'
+                '*horizontal* allows horizontal extend.',
+                '*vertical* allows vertical extend.'
             ].join(' ')
         },
 
