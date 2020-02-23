@@ -32,7 +32,7 @@ var redrawReglTraces = require('../../plot_api/subroutines').redrawReglTraces;
 
 var constants = require('./constants');
 var MINSELECT = constants.MINSELECT;
-var CIRCLE_SIDES = 24; // should be divisible by 8
+var CIRCLE_SIDES = 60; // should be divisible by 8
 var SQRT2 = Math.sqrt(2);
 
 var filteredPolygon = polygon.filter;
@@ -179,27 +179,39 @@ function prepSelect(e, startX, startY, dragOptions, mode) {
 
         if(isRectMode) {
             var isLine = isDrawMode && !drwStyle.closed;
-            var isEllipse = isDrawMode && drwStyle.closed && drwStyle.ellipse;
+            var isEllipse = (
+                (isSelectMode && fullLayout.selectshape === 'circular') ||
+                (isDrawMode && drwStyle.ellipse && drwStyle.closed)
+            );
             var isLineOrEllipse = isLine || isEllipse; // cases with two start & end positions
 
             var direction;
             var start, end;
 
             if(isSelectMode) {
-                direction = fullLayout.selectdirection;
+                var q = fullLayout.selectdirection;
 
-                if(direction === 'any') {
+                if(q === 'any') {
                     if(dy < Math.min(dx * 0.6, MINSELECT)) {
                         direction = 'h';
-                        start = 0;
-                        end = ph;
                     } else if(dx < Math.min(dy * 0.6, MINSELECT)) {
                         direction = 'v';
-                        start = 0;
-                        end = pw;
                     } else {
                         direction = 'd';
                     }
+                } else {
+                    direction = q;
+                }
+
+                switch(direction) {
+                    case 'h':
+                        start = isEllipse ? ph / 2 : 0;
+                        end = ph;
+                        break;
+                    case 'v':
+                        start = isEllipse ? pw / 2 : 0;
+                        end = pw;
+                        break;
                 }
             }
 

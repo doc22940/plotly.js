@@ -166,5 +166,15 @@ module.exports = {
             '*v* only vertical, *d* only diagonal and *any* sets no limit.'
         ].join(' '),
         editType: 'none'
+    },
+    selectshape: {
+        valType: 'enumerated',
+        role: 'info',
+        values: ['box', 'circular'],
+        dflt: 'box',
+        description: [
+            'When `dragmode` is set to *select*, this determines the shape of selection.'
+        ].join(' '),
+        editType: 'none'
     }
 };
