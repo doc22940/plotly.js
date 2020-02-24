@@ -167,7 +167,11 @@ function getButtonGroups(gd) {
     if(isSelectable(fullData)) {
         dragModeGroup.push('select2d', 'lasso2d');
     }
-    if(isDrawable(fullLayout)) {
+    if(
+        // fullLayout._has('mapbox') ||
+        // fullLayout._has('ternary') ||
+        fullLayout._has('cartesian')
+    ) {
         dragModeGroup.push('sizedraw', 'freedraw');
     }
 
@@ -220,16 +224,6 @@ function isSelectable(fullData) {
     }
 
     return selectable;
-}
-
-function isDrawable(fullLayout) {
-    var drawable = (
-        // fullLayout._has('mapbox') ||
-        // fullLayout._has('ternary') ||
-        fullLayout._has('cartesian')
-    );
-
-    return drawable;
 }
 
 // check whether all trace are 'noHover'
