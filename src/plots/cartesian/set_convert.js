@@ -778,8 +778,8 @@ module.exports = function setConvert(ax, fullLayout) {
             arrayOut = new Array(len);
 
             var dv = (trace['d' + axLetter]) ? Number(trace['d' + axLetter]) : 1;
-            var d2c = ax.breaks ? Number : ax.d2c;
-            var v0 = ((axLetter + '0') in trace) ? d2c(trace[axLetter + '0'], 0, cal) : 0;
+            var d2cForv0 = ax.breaks ? Number : ax.d2c;
+            var v0 = ((axLetter + '0') in trace) ? d2cForv0(trace[axLetter + '0'], 0, cal) : 0;
 
             if(ax.breaks) {
                 for(i = 0; i < len; i++) {
