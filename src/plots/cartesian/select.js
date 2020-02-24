@@ -954,7 +954,12 @@ function addShape(outlines, dragOptions, opts) {
         var zoomLayer = fullLayout._zoomlayer;
         zoomLayer.selectAll('.outline-vertices').remove();
 
-        var oldShapes = fullLayout.shapes;
+        var oldShapes = [];
+        for(var q = 0; q < fullLayout.shapes.length; q++) {
+            oldShapes.push(
+                fullLayout.shapes[q]._input
+            );
+        }
 
         Registry.call('relayout', gd, {
             shapes: drwStyle.order === 'back' ?
