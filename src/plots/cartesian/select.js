@@ -12,6 +12,7 @@
 var polybool = require('polybooljs');
 
 var Registry = require('../../registry');
+var dragElement = require('../../components/dragelement');
 var dashStyle = require('../../components/drawing').dashStyle;
 var Color = require('../../components/color');
 var Fx = require('../../components/fx');
@@ -683,49 +684,150 @@ function determineSearchTraces(gd, xAxes, yAxes, subplot) {
 }
 
 function displayOutlines(
-    polygons, // in
-    outlines, // inout
+    polygons,
+    outlines,
     dragOptions
 ) {
-    var fullLayout = dragOptions.gd._fullLayout;
+    var plotinfo = dragOptions.plotinfo;
+    var xs = plotinfo.xaxis._offset;
+    var ys = plotinfo.yaxis._offset;
+
+    var gd = dragOptions.gd;
+    var fullLayout = gd._fullLayout;
     var isDrawMode = drawMode(dragOptions.dragmode);
     var isOpen = isDrawMode && !fullLayout.newshape.closed;
-    var i;
 
     var paths = [];
-    for(i = 0; i < polygons.length; i++) {
+    for(var k = 0; k < polygons.length; k++) {
         // create outline path
         paths.push(
-            providePath(polygons[i], isOpen)
+            providePath(polygons[k], isOpen)
+        );
+    }
+    // make outline
+    outlines.attr('d', writePaths(paths, isOpen));
+
+    var vetrexDragOptions;
+    var indexI;
+    var indexJ;
+    var cx;
+    var cy;
+
+    function startDragVertex(evt) {
+        indexI = +evt.srcElement.getAttribute('data-i');
+        indexJ = +evt.srcElement.getAttribute('data-j');
+        cx = +evt.srcElement.getAttribute('cx');
+        cy = +evt.srcElement.getAttribute('cy');
+
+        vetrexDragOptions[indexI][indexJ].moveFn = moveVertex;
+    }
+
+    function moveVertex(dx, dy) {
+        var polygon = polygons[indexI];
+        var len = polygon.length;
+        if(len === 4 && pointsShapeRectangle(polygon)) {
+            for(var q = 0; q < len; q++) {
+                if(q === indexJ) continue;
+
+                // move other corners of rectangle
+                var pos = polygon[q];
+
+                if(pos[0] === polygon[indexJ][0]) {
+                    pos[0] = cx + dx;
+                }
+
+                if(pos[1] === polygon[indexJ][1]) {
+                    pos[1] = cy + dy;
+                }
+            }
+            // move the corner
+            polygon[indexJ][0] = cx + dx;
+            polygon[indexJ][1] = cy + dy;
+        } else { // other polylines
+            polygon[indexJ][0] = cx + dx;
+            polygon[indexJ][1] = cy + dy;
+            polygon._formchanged = true;
+        }
+
+        // recursive call
+        displayOutlines(
+            polygons,
+            outlines,
+            dragOptions
         );
     }
 
-    // make outline
-    outlines.attr('d', writePaths(paths, isOpen));
+    function endDragVertex(evt) {
+        Lib.noop(evt);
+    }
+
+    function clickVertex() {
+        if(polygons[indexI].length > 2) {
+            // remove vertex
+            var newPolygon = [];
+            for(var j = 0; j < polygons[indexI].length; j++) {
+                if(j !== indexJ) {
+                    newPolygon.push(
+                        polygons[indexI][j]
+                    );
+                }
+            }
+            polygons[indexI] = newPolygon;
+        } else {
+            // remove cell
+            var newPolygons = [];
+            for(var i = 0; i < polygons.length; i++) {
+                if(i !== indexI) {
+                    newPolygons.push(
+                        polygons[i]
+                    );
+                }
+            }
+            polygons = newPolygons;
+        }
+
+        // recursive call
+        displayOutlines(
+            polygons, // in
+            outlines, // inout
+            dragOptions
+        );
+    }
 
     var zoomLayer = fullLayout._zoomlayer;
     zoomLayer.selectAll('.outline-vertices').remove();
 
     if(isDrawMode) {
-        var plotinfo = dragOptions.plotinfo;
-        var xs = plotinfo.xaxis._offset;
-        var ys = plotinfo.yaxis._offset;
+        var g = zoomLayer.append('g')
+            .attr('class', 'outline-vertices');
 
-        for(i = 0; i < polygons.length; i++) {
+        vetrexDragOptions = [];
+        for(var i = 0; i < polygons.length; i++) {
+            vetrexDragOptions[i] = [];
             for(var j = 0; j < polygons[i].length; j++) {
-                var pos = polygons[i][j];
-
-                zoomLayer.append('circle')
-                .attr('class', 'outline-vertices')
+                var vertex = g.append('circle')
+                .attr('data-i', i)
+                .attr('data-j', j)
                 .attr('transform', 'translate(' + xs + ', ' + ys + ')')
-                .attr('cx', pos[0])
-                .attr('cy', pos[1])
-                .attr('r', 5)
+                .attr('cx', polygons[i][j][0])
+                .attr('cy', polygons[i][j][1])
+                .attr('r', MINSELECT / 2)
                 .style({
-                    fill: 'red',
+                    'mix-blend-mode': 'luminosity',
+                    fill: '#777',
                     stroke: 'white',
                     'stroke-width': 1
                 });
+
+                vetrexDragOptions[i][j] = {
+                    element: vertex.node(),
+                    gd: gd,
+                    prepFn: startDragVertex,
+                    doneFn: endDragVertex,
+                    clickFn: clickVertex
+                };
+
+                dragElement.init(vetrexDragOptions[i][j]);
             }
         }
     }
@@ -802,6 +904,53 @@ function fixDatesOnPaths(path, xaxis, yaxis) {
     }
 
     return path;
+}
+
+function almostEq(a, b) {
+    return Math.abs(a - b) <= 1e-6;
+}
+
+/*
+function dist(a, b) {
+    var dx = b[0] - a[0];
+    var dy = b[1] - a[1];
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+}
+
+function calcArea(points) {
+    var side1 = dist(points[0], points[1]);
+    var side2 = dist(points[1], points[2]);
+    var side3 = dist(points[2], points[0]);
+    var s = (side1 + side2 + side3) / 2;
+    return Math.sqrt(
+        s *
+        (s - side1) *
+        (s - side2) *
+        (s - side3)
+    );
+}
+*/
+
+function pointsShapeRectangle(polygon) {
+    for(var j = 0; j < 2; j++) {
+        var e01 = polygon[0][j] - polygon[1][j];
+        var e32 = polygon[3][j] - polygon[2][j];
+
+        if(!almostEq(e01, e32)) return false;
+
+        var e03 = polygon[0][j] - polygon[3][j];
+        var e12 = polygon[1][j] - polygon[2][j];
+        if(!almostEq(e03, e12)) return false;
+    }
+
+    return true;
+}
+
+function pointsShapeEllipse(polygon) {
+    return !!polygon._formchanged;
 }
 
 function handleEllipse(isEllipse, start, end) {
@@ -907,37 +1056,41 @@ function addShape(outlines, dragOptions, opts) {
             shape.fillrule = drwStyle.fillrule;
         }
 
-        if(len === CIRCLE_SIDES &&
+        if(
+            len === CIRCLE_SIDES &&
             isRectMode && drwStyle.drawshape === 'circular' &&
             xaxis.type !== 'log' && yaxis.type !== 'log' &&
-            xaxis.type !== 'date' && yaxis.type !== 'date'
-            // TODO: ensure the circle was not modified
+            xaxis.type !== 'date' && yaxis.type !== 'date' &&
+            pointsShapeEllipse(polygon)
         ) {
             shape.type = 'circle'; // an ellipse!
             var j = Math.floor((CIRCLE_SIDES + 1) / 2);
             var k = Math.floor((CIRCLE_SIDES + 1) / 8);
             var pos = ellipseOver({
-                x0: (polygons[i][0][0] + polygons[i][j][0]) / 2,
-                y0: (polygons[i][0][1] + polygons[i][j][1]) / 2,
-                x1: polygons[i][k][0],
-                y1: polygons[i][k][1],
+                x0: (polygon[0][0] + polygon[j][0]) / 2,
+                y0: (polygon[0][1] + polygon[j][1]) / 2,
+                x1: polygon[k][0],
+                y1: polygon[k][1],
             });
             shape.x0 = pos.x0;
             shape.y0 = pos.y0;
             shape.x1 = pos.x1;
             shape.y1 = pos.y1;
-        } else if(len === 4 && isRectMode) {
+        } else if(
+            len === 4 && isRectMode &&
+            pointsShapeRectangle(polygon)
+        ) {
             shape.type = 'rect';
-            shape.x0 = polygons[i][0][0];
-            shape.y0 = polygons[i][0][1];
-            shape.x1 = polygons[i][2][0];
-            shape.y1 = polygons[i][2][1];
+            shape.x0 = polygon[0][0];
+            shape.y0 = polygon[0][1];
+            shape.x1 = polygon[2][0];
+            shape.y1 = polygon[2][1];
         } else if(len === 2 && isRectMode && isOpen) {
             shape.type = 'line';
-            shape.x0 = polygons[i][0][0];
-            shape.y0 = polygons[i][0][1];
-            shape.x1 = polygons[i][1][0];
-            shape.y1 = polygons[i][1][1];
+            shape.x0 = polygon[0][0];
+            shape.y0 = polygon[0][1];
+            shape.x1 = polygon[1][0];
+            shape.y1 = polygon[1][1];
         } else {
             shape.type = 'path';
             fixDatesOnPaths(polygon, xaxis, yaxis);
@@ -1197,6 +1350,7 @@ function clearSelect(gd) {
     var fullLayout = gd._fullLayout || {};
     var zoomLayer = fullLayout._zoomlayer;
     if(zoomLayer) {
+        zoomLayer.selectAll('.outline-vertices').remove();
         zoomLayer.selectAll('.select-outline').remove();
     }
 }
