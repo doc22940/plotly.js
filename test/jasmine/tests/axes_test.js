@@ -1017,6 +1017,10 @@ describe('Test axes', function() {
             expect(layoutOut.yaxis.range).withContext('yaxis range').toEqual([0, 4]);
             expect(layoutOut.yaxis2.range).withContext('yaxis2 range').toEqual([0, 4]);
         });
+
+        it('should ... axis breaks', function() {
+
+        });
     });
 
     describe('constraints relayout', function() {
@@ -3900,6 +3904,338 @@ describe('Test axes', function() {
             })
             .catch(failTest)
             .then(done);
+        });
+    });
+
+    fdescribe('*breaks*', function() {
+        describe('during doCalcdata', function() {
+            var gd;
+
+            function _calc(trace, layout) {
+                gd = {data: [trace], layout: layout};
+                supplyDefaults(gd);
+                Plots.doCalcdata(gd);
+            }
+
+            function _assert(exp) {
+                var cd = gd.calcdata[0];
+                var xc = cd.map(function(cdi) { return cdi.x; });
+                expect(xc).toEqual(exp);
+            }
+
+            it('should discard coords within break bounds', function() {
+                _calc({
+                    x: [0, 10, 50, 90, 100, 150, 190, 200]
+                }, {
+                    xaxis: {
+                        breaks: [
+                            {bounds: [11, 89]},
+                            {bounds: [101, 189]}
+                        ]
+                    }
+                });
+                _assert([0, 10, BADNUM, 90, 100, BADNUM, 190, 200]);
+            });
+
+            it('should discard coords within break bounds - date %w case', function() {
+                _calc({
+                    x: [
+                        // Thursday
+                        '2020-01-02 08:00', '2020-01-02 16:00',
+                        // Friday
+                        '2020-01-03 08:00', '2020-01-03 16:00',
+                        // Saturday
+                        '2020-01-04 08:00', '2020-01-04 16:00',
+                        // Sunday
+                        '2020-01-05 08:00', '2020-01-05 16:00',
+                        // Monday
+                        '2020-01-06 08:00', '2020-01-06 16:00',
+                        // Tuesday
+                        '2020-01-07 08:00', '2020-01-07 16:00'
+                    ]
+                }, {
+                    xaxis: {
+                        breaks: [
+                            {directive: '%w', bounds: [6, 1]}
+                        ]
+                    }
+                });
+                _assert([
+                    1577952000000, 1577980800000,
+                    1578038400000, 1578067200000,
+                    BADNUM, BADNUM,
+                    BADNUM, BADNUM,
+                    1578297600000, 1578326400000,
+                    1578384000000, 1578412800000
+                ]);
+            });
+
+            it('should discard coords within break bounds - date %H case', function() {
+                _calc({
+                    x: [
+                        '2020-01-02 08:00', '2020-01-02 20:00',
+                        '2020-01-03 08:00', '2020-01-03 20:00',
+                        '2020-01-04 08:00', '2020-01-04 20:00',
+                        '2020-01-05 08:00', '2020-01-05 20:00',
+                        '2020-01-06 08:00', '2020-01-06 20:00',
+                        '2020-01-07 08:00', '2020-01-07 20:00'
+                    ]
+                }, {
+                    xaxis: {
+                        breaks: [
+                            {directive: '%H', bounds: [17, 8]}
+                        ]
+                    }
+                });
+                _assert([
+                    1577952000000, BADNUM,
+                    1578038400000, BADNUM,
+                    1578124800000, BADNUM,
+                    1578211200000, BADNUM,
+                    1578297600000, BADNUM,
+                    1578384000000, BADNUM
+                ]);
+            });
+
+            it('should adapt coords generated from x0/dx about breaks', function() {
+                _calc({
+                    x0: 1,
+                    dx: 0.5,
+                    y: [1, 3, 5, 2, 4]
+                }, {
+                    xaxis: {
+                        breaks: [
+                            {bounds: [2, 3]}
+                        ]
+                    }
+                });
+                _assert([1, 1.5, 2, BADNUM, 3]);
+            });
+        });
+
+        describe('during doAutorange', function() {
+            // ...
+        });
+
+        describe('during setConvert (once range is available)', function() {
+            var gd;
+
+            beforeEach(function() {
+                gd = createGraphDiv();
+            });
+
+            afterEach(destroyGraphDiv);
+
+            function _assert(msg, axLetter, exp) {
+                var fullLayout = gd._fullLayout;
+                var ax = fullLayout[axLetter + 'axis'];
+
+                if(exp) {
+                    expect(ax._breaks.length)
+                        .toBe(exp.breaks.length, msg + '| correct # of breaks');
+                    expect(ax._breaks.map(function(brk) { return [brk.min, brk.max]; }))
+                        .toBeCloseTo2DArray(exp.breaks, 2, msg + '| breaks [min,max]');
+
+                    expect(ax._m2).toBe(exp.m2, msg + '| l2p slope');
+                    expect(ax._B).toBeCloseToArray(exp.B, 2, msg + '| l2p piecewise offsets');
+                } else {
+                    expect(ax._breaks).toBeUndefined();
+                    expect(ax._m2).toBeUndefined();
+                    expect(ax._B).toBeUndefined();
+                }
+            }
+
+            // TODO
+            // - should pick correct offset during l2p and p2l
+
+            it('should locate breaks & compute l <-> p parameters - x-axis case', function(done) {
+                Plotly.plot(gd, [{
+                    x: [0, 10, 50, 90, 100, 150, 190, 200]
+                }], {
+                    xaxis: {}
+                })
+                .then(function() {
+                    _assert('no set breaks', 'x', null);
+                })
+                .then(function() {
+                    gd.layout.xaxis.breaks = [
+                        {bounds: [11, 89]},
+                        {bounds: [101, 189]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .then(function() {
+                    _assert('2 disjoint breaks within range', 'x', {
+                        breaks: [[11, 89], [101, 189]],
+                        m2: 14.667176740627397,
+                        B: [20.657, -1123.381, -2414.0933]
+                    });
+                })
+                .then(function() {
+                    gd.layout.xaxis.breaks = [
+                        {bounds: [11, 89]},
+                        {bounds: [70, 189]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .then(function() {
+                    _assert('2 overlapping breaks within range', 'x', {
+                        breaks: [[11, 189]],
+                        m2: 21.759364358683328,
+                        B: [30.646, -3842.519]
+                    });
+                })
+                .then(function() {
+                    // TODO
+                    // - breaks with bounds beyond range
+                    //
+                })
+                .catch(failTest)
+                .then(done);
+            });
+
+            it('should locate breaks & compute l <-> p parameters - y-axis case', function(done) {
+                Plotly.plot(gd, [{
+                    y: [0, 10, 50, 90, 100, 150, 190, 200]
+                }], {
+                    yaxis: {}
+                })
+                .then(function() {
+                    _assert('no set breaks', 'y', null);
+                })
+                .then(function() {
+                    gd.layout.yaxis.breaks = [
+                        {bounds: [11, 89]},
+                        {bounds: [101, 189]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .then(function() {
+                    _assert('2 disjoint breaks within range', 'y', {
+                        breaks: [[101, 189], [11, 89]],
+                        m2: 6.798561151079135,
+                        B: [1379.136, 780.863, 250.575]
+                    });
+                })
+                .then(function() {
+                    gd.layout.yaxis.breaks = [
+                        {bounds: [11, 89]},
+                        {bounds: [70, 189]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .then(function() {
+                    _assert('2 overlapping breaks within range', 'y', {
+                        breaks: [[11, 189]],
+                        m2: 9.74226804123711,
+                        B: [1976.288, 242.164]
+                    });
+                })
+                .catch(failTest)
+                .then(done);
+            });
+
+            it('should locate breaks & compute l <-> p parameters - date axis case', function(done) {
+                Plotly.plot(gd, [{
+                    x: [
+                        // Thursday
+                        '2020-01-02 08:00', '2020-01-02 17:00',
+                        // Friday
+                        '2020-01-03 08:00', '2020-01-03 17:00',
+                        // Saturday
+                        '2020-01-04 08:00', '2020-01-04 17:00',
+                        // Sunday
+                        '2020-01-05 08:00', '2020-01-05 17:00',
+                        // Monday
+                        '2020-01-06 08:00', '2020-01-06 17:00',
+                        // Tuesday
+                        '2020-01-07 08:00', '2020-01-07 17:00'
+                    ]
+                }], {
+                    xaxis: {}
+                })
+                .then(function() {
+                    _assert('no set breaks', 'x', null);
+                })
+                .then(function() {
+                    gd.layout.xaxis.breaks = [
+                        {directive: '%w', bounds: [6, 1]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .then(function() {
+                    _assert('break over the weekend days', 'x', {
+                        breaks: [
+                            ['2020-01-04', '2020-01-06'].map(Lib.dateTime2ms)
+                        ],
+                        m2: 0.0000018112244902237398,
+                        B: [-2858019.383, -2858332.362]
+                    });
+                })
+                .then(function() {
+                    gd.layout.xaxis.breaks = [
+                        {directive: '%H', bounds: [17, 8]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .then(function() {
+                    _assert('breaks outside workday hours', 'x', {
+                        breaks: [
+                            ['2020-01-02 17:00:00', '2020-01-03 08:00:00'].map(Lib.dateTime2ms),
+                            ['2020-01-03 17:00:00', '2020-01-04 08:00:00'].map(Lib.dateTime2ms),
+                            ['2020-01-04 17:00:00', '2020-01-05 08:00:00'].map(Lib.dateTime2ms),
+                            ['2020-01-05 17:00:00', '2020-01-06 08:00:00'].map(Lib.dateTime2ms),
+                            ['2020-01-06 17:00:00', '2020-01-07 08:00:00'].map(Lib.dateTime2ms),
+                            [Lib.dateTime2ms('2020-01-07 17:00:00'), 1578419670422.5]
+                        ],
+                        m2: 0.000002731819931229216,
+                        B: [
+                            -4310671.789917635, -4310819.308193921,
+                            -4310966.826470207, -4311114.344746494,
+                            -4311261.86302278, -4311409.381299066,
+                            -4311418.315504435
+                        ]
+                    });
+                })
+                .then(function() {
+                    gd.layout.xaxis.breaks = [
+                        {directive: '%w', bounds: [6, 1]},
+                        {directive: '%H', bounds: [17, 8]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .then(function() {
+                    _assert('breaks outside workday hours & weekends', 'x', {
+                        breaks: [
+                            ['2020-01-02 17:00:00', '2020-01-03 08:00:00'].map(Lib.dateTime2ms),
+                            ['2020-01-03 17:00:00', '2020-01-06 08:00:00'].map(Lib.dateTime2ms),
+                            ['2020-01-06 17:00:00', '2020-01-07 08:00:00'].map(Lib.dateTime2ms),
+                            [Lib.dateTime2ms('2020-01-07 17:00:00'), 1578419670422.5]
+                        ],
+                        m2: 0.000004064109903767334,
+                        B: [
+                            -6412957.059513, -6413176.521447803,
+                            -6414098.261573978, -6414317.723508781,
+                            -6414331.014865252
+                        ]
+                    });
+                })
+                .then(function() {
+                    // TODO in reverse order, this does not work !
+
+                    gd.layout.xaxis.breaks = [
+                        {directive: '%H', bounds: [17, 8]},
+                        {directive: '%w', bounds: [6, 1]}
+                    ];
+                    return Plotly.react(gd, gd.data, gd.layout);
+                })
+                .catch(failTest)
+                .then(done);
+            });
+        });
+
+        describe('during calcTicks', function() {
+            // ...
         });
     });
 });

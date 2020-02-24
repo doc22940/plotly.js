@@ -2029,6 +2029,39 @@ describe('axis zoom/pan and main plot zoom', function() {
         .catch(failTest)
         .then(done);
     });
+
+    describe('with axis breaks', function() {
+        function _assert(msg, xrng) {
+            expect(gd.layout.xaxis.range).toBeCloseToArray(xrng, 2, 'xrng - ' + msg);
+        }
+
+        it('should compute correct range updates', function(done) {
+            Plotly.plot(gd, [{
+                mode: 'lines',
+                x: [0, 10, 50, 90, 100, 150, 190, 200]
+            }], {
+                xaxis: {
+                    breaks: [
+                        {bounds: [11, 89]},
+                        {bounds: [101, 189]}
+                    ]
+                },
+                dragmode: 'zoom'
+            })
+            .then(function() { _assert('base', [0, 200]); })
+            .then(doDrag('xy', 'nsew', 50, 0))
+            // x range would be ~ [100, 118] w/o breaks
+            .then(function() { _assert('after x-only zoombox', [95, 98.148]); })
+            .then(doDblClick('xy', 'nsew'))
+            .then(function() { _assert('back to base', [0, 200]); })
+            .then(function() { return Plotly.relayout(gd, 'dragmode', 'pan'); })
+            .then(doDrag('xy', 'nsew', 50, 0))
+            // x range would be ~ [-18, 181] w/o breaks
+            .then(function() { _assert('after x-only pan', [-3.148, 196.851]); })
+            .catch(failTest)
+            .then(done);
+        });
+    });
 });
 
 describe('Event data:', function() {
