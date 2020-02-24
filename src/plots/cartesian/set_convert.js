@@ -170,6 +170,8 @@ module.exports = function setConvert(ax, fullLayout) {
         if(isNumeric(v)) return +v;
     }
 
+    // TODO move if-statements in setConvert scope for perf !!
+
     function l2p(v) {
         if(!isNumeric(v)) return BADNUM;
 
